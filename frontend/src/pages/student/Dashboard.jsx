@@ -1,14 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import FileUploadEnhanced from '../../components/FileUploadEnhanced';
 import EvaluationList from '../../components/EvaluationList';
+import CalendarView from '../../components/CalendarView';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [uploadResults, setUploadResults] = useState([]);
+  const [bookedMeetings, setBookedMeetings] = useState([]);
+  const [loadingMeetings, setLoadingMeetings] = useState(false);
   const navigate = useNavigate();
+
+  // Fetch student's booked meetings
+  useEffect(() => {
+    if (user && user.role === 'etudiant') {
+      setLoadingMeetings(true);
+      fetch(`http://localhost:5000/api/meetings/student/${user._id}`)
+        .then(res => res.json())
+        .then(data => {
+          setBookedMeetings(data);
+          setLoadingMeetings(false);
+        })
+        .catch(err => {
+          console.error('Error fetching meetings:', err);
+          setLoadingMeetings(false);
+        });
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -44,11 +64,11 @@ const Dashboard = () => {
       link: "/courses"
     },
     {
-      title: "Fichiers",
-      value: "24 uploadés",
-      icon: "📁",
+      title: "Meetings",
+      value: user.role === 'etudiant' ? `${bookedMeetings.length} réservés` : "Fichiers",
+      icon: user.role === 'etudiant' ? "📅" : "📁",
       color: "bg-purple-500",
-      link: "#files"
+      link: user.role === 'etudiant' ? "#meetings" : "#files"
     },
     {
       title: "Progression",
@@ -68,6 +88,24 @@ const Dashboard = () => {
       color: "bg-blue-50 border-blue-200",
       textColor: "text-blue-700",
       showFor: ['enseignant']
+    },
+    {
+      title: "Créer un créneau",
+      description: "Définir vos disponibilités pour les meetings",
+      icon: "🗓️",
+      link: "/define-slots",
+      color: "bg-teal-50 border-teal-200",
+      textColor: "text-teal-700",
+      showFor: ['enseignant']
+    },
+    {
+      title: "Réserver un meeting",
+      description: "Voir les créneaux disponibles et réserver",
+      icon: "📅",
+      link: "/calendar",
+      color: "bg-green-50 border-green-200",
+      textColor: "text-green-700",
+      showFor: ['etudiant']
     },
     {
       title: "Upload de fichiers",
@@ -106,8 +144,17 @@ const Dashboard = () => {
       showFor: ['etudiant']
     },
     {
+      title: "Mes meetings",
+      description: "Voir mes créneaux réservés",
+      icon: "📅",
+      link: "#meetings",
+      color: "bg-indigo-50 border-indigo-200",
+      textColor: "text-indigo-700",
+      showFor: ['etudiant']
+    },
+    {
       title: "Uploader une vidéo",
-      description: "Ajouter une vidéo de cours ou d’introduction",
+      description: "Ajouter une vidéo de cours ou d'introduction",
       icon: "🎥",
       link: "/upload-teacher-video",
       color: "bg-indigo-50 border-indigo-200",
@@ -139,6 +186,18 @@ const Dashboard = () => {
       color: "text-purple-600"
     }
   ];
+
+  const formatMeetingDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -213,6 +272,23 @@ const Dashboard = () => {
                     </div>
                   );
                 }
+                if (action.title === 'Mes meetings') {
+                  return (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border-2 ${action.color} ${action.textColor} hover:shadow-md transition-shadow cursor-pointer`}
+                      onClick={() => setActiveTab('meetings')}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{action.icon}</span>
+                        <div>
+                          <h3 className="font-medium">{action.title}</h3>
+                          <p className="text-sm opacity-75">{action.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <Link
                     key={index}
@@ -238,10 +314,12 @@ const Dashboard = () => {
             <nav className="flex space-x-8 px-6">
               {[
                 { id: 'overview', name: 'Vue d\'ensemble', icon: '📊' },
+                { id: 'meetings', name: 'Mes meetings', icon: '📅', showFor: ['etudiant'] },
                 { id: 'evaluations', name: 'Évaluations', icon: '📝' },
                 { id: 'files', name: 'Fichiers', icon: '📁' },
                 { id: 'recent', name: 'Activités récentes', icon: '🕒' }
-              ].map((tab) => (
+              ].filter(tab => !tab.showFor || tab.showFor.includes(user.role))
+                .map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -292,12 +370,74 @@ const Dashboard = () => {
                         <span className="font-bold text-green-700">2</span>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                        <span className="text-purple-700">Fichiers partagés</span>
-                        <span className="font-bold text-purple-700">15</span>
+                        <span className="text-purple-700">Meetings réservés</span>
+                        <span className="font-bold text-purple-700">{bookedMeetings.length}</span>
                       </div>
                     </div>
                   </div>
                 </div>
+                {/* Calendar Integration */}
+                <div>
+                  <CalendarView />
+                </div>
+              </div>
+            )}
+
+            {/* Meetings Tab */}
+            {activeTab === 'meetings' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Mes meetings réservés</h3>
+                {loadingMeetings ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Chargement des meetings...</p>
+                  </div>
+                ) : bookedMeetings.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {bookedMeetings.map((meeting) => (
+                      <div key={meeting._id} className="bg-white border rounded-lg shadow-sm p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 font-bold text-lg">
+                              {meeting.teacher?.firstName?.charAt(0) || 'T'}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {meeting.teacher?.firstName} {meeting.teacher?.lastName}
+                            </h4>
+                            <p className="text-sm text-gray-600">{meeting.teacher?.subject || 'Matière non spécifiée'}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-500">📅</span>
+                            <span className="text-sm text-gray-700">{formatMeetingDate(meeting.date)}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-500">📝</span>
+                            <span className="text-sm text-gray-700">{meeting.title}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-500">📧</span>
+                            <span className="text-sm text-gray-700">{meeting.teacher?.email}</span>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Réservé
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <span className="text-4xl mb-4 block">📅</span>
+                    <p className="text-gray-500">Aucun meeting réservé</p>
+                    <p className="text-sm text-gray-400 mt-2">Allez sur le calendrier pour réserver un créneau</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -9,14 +9,14 @@ const Header = () => (
         <Link to="/" className="inline-block w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-2xl">E4A</Link>
         <span className="font-poppins text-xl font-bold text-primary">Edu4All</span>
       </div>
-      {/* Navigation */}
+          {/* Navigation */}
       <nav className="hidden md:flex gap-8 font-inter text-base">
         <Link to="/" className="hover:text-primary">Home</Link>
         <Link to="/about" className="hover:text-primary">Pages</Link>
         <Link to="/courses" className="hover:text-primary">Courses</Link>
         <Link to="/blog" className="hover:text-primary">Blog</Link>
         <Link to="/contact" className="hover:text-primary">Contact</Link>
-      </nav>
+          </nav>
       {/* Actions */}
       <div className="flex items-center gap-4">
         <Link to="/login" className="btn-secondary hidden md:inline-block">Login</Link>
@@ -24,10 +24,10 @@ const Header = () => (
         {/* Mobile menu button */}
         <button className="md:hidden p-2 rounded focus-ring" aria-label="Open menu">
           <svg className="w-7 h-7 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </button>
-      </div>
-    </div>
-  </header>
-);
+            </button>
+          </div>
+        </div>
+    </header>
+  );
 
 export default Header;

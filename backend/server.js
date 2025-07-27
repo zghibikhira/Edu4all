@@ -16,7 +16,11 @@ app.use(morgan('combined'));
 
 // Middleware CORS
 app.use(cors({
-origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3002'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002'
+  ],
   credentials: true
 }));
 
@@ -29,11 +33,13 @@ const authRoutes = require('./routes/auth');
 const fileRoutes = require('./routes/files');
 const evaluationRoutes = require('./routes/evaluations');
 const courseRoutes = require('./routes/courses');
+const meetingRoutes = require('./routes/meetings');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // Serve uploaded videos statically
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')));

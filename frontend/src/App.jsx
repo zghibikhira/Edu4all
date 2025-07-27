@@ -12,13 +12,15 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import CourseDetails from './pages/CourseDetails';
 import StudentProfile from './pages/student/Profile.jsx';
-import StudentDashboard from './pages/student/Dashboard.jsx';
+import StudentDashboard from './pages/student/Dashboard';
 import StudentEvaluations from './pages/student/Evaluations.jsx';
 import InstructorProfile from './pages/teacher/InstructorProfile.jsx';
 import UploadTeacherVideo from './pages/teacher/UploadTeacherVideo.jsx';
+import DefineSlots from './pages/teacher/DefineSlots.jsx';
 import Teachers from './pages/Teachers';
 import CreateEvaluation from './pages/CreateEvaluation';
 import FileUploadDemo from './pages/FileUploadDemo';
+import CalendarView from './components/CalendarView';
 
 export default function App() {
   return (
@@ -43,7 +45,9 @@ export default function App() {
               <Route path="/file-upload-demo" element={<FileUploadDemo />} />
               <Route path="/instructor/:id" element={<InstructorProfile />} />
               <Route path="/upload-teacher-video" element={<UploadTeacherVideo />} />
+              <Route path="/define-slots" element={<Protected><DefineSlots /></Protected>} />
               <Route path="/teachers" element={<Teachers />} />
+              <Route path="/calendar" element={<Protected><CalendarView /></Protected>} />
             </Routes>
           </main>
           <Footer />
