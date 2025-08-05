@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import FileUploadEnhanced from '../../components/FileUploadEnhanced';
 import EvaluationList from '../../components/EvaluationList';
 import CalendarView from '../../components/CalendarView';
+import ChatSummary from '../../components/ChatSummary';
+import WalletSummary from '../../components/WalletSummary';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -151,6 +153,24 @@ const Dashboard = () => {
       color: "bg-indigo-50 border-indigo-200",
       textColor: "text-indigo-700",
       showFor: ['etudiant']
+    },
+    {
+      title: "Chat",
+      description: "Discuter avec les autres utilisateurs",
+      icon: "💬",
+      link: "/chat",
+      color: "bg-blue-50 border-blue-200",
+      textColor: "text-blue-700",
+      showFor: ['etudiant', 'enseignant']
+    },
+    {
+      title: "Mon Wallet",
+      description: "Gérer mon solde et mes transactions",
+      icon: "💰",
+      link: "/wallet",
+      color: "bg-green-50 border-green-200",
+      textColor: "text-green-700",
+      showFor: ['etudiant', 'enseignant']
     },
     {
       title: "Uploader une vidéo",
@@ -376,6 +396,12 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </div>
+                {/* Wallet and Chat Summary */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <WalletSummary />
+                  <ChatSummary />
+                </div>
+                
                 {/* Calendar Integration */}
                 <div>
                   <CalendarView />

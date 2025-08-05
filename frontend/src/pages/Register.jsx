@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 export default function Register() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -17,6 +19,7 @@ export default function Register() {
     teacherInfo: { subjects: [] }
   });
   const [message, setMessage] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
@@ -44,6 +47,8 @@ export default function Register() {
     try {
       const res = await axios.post('http://localhost:5000/api/auth/register', form);
       setMessage(res.data.message);
+      setSuccess(true);
+      
       // Clear form on success
       if (res.data.success) {
         setForm({ 
@@ -58,9 +63,13 @@ export default function Register() {
           studentInfo: { level: 'college' },
           teacherInfo: { subjects: [] }
         });
+        
+        // Redirect to login page after successful registration
+        setTimeout(() => navigate('/login'), 2000);
       }
     } catch (err) {
       setMessage(err.response?.data?.message || "Erreur lors de l'inscription.");
+      setSuccess(false);
     }
   };
 
@@ -68,6 +77,18 @@ export default function Register() {
     <>
       <Header />
       <div className="max-w-md mx-auto my-10 p-6 bg-white rounded shadow">
+        {/* Back to Home Button */}
+        <div className="mb-4">
+          <Link 
+            to="/" 
+            className="inline-flex items-center text-[#1E90FF] hover:text-[#187bcd] transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Retour à l'accueil
+          </Link>
+        </div>
         <h2 className="text-2xl font-bold text-[#1E90FF] mb-4">Register</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -186,10 +207,23 @@ export default function Register() {
           </button>
         </form>
         {message && (
-          <p className={`mt-2 ${message.includes('Erreur') ? 'text-red-600' : 'text-green-600'}`}>
+          <p className={`mt-2 font-semibold ${success ? 'text-green-600' : 'text-red-600'}`}>
             {message}
           </p>
         )}
+        
+        {/* Login Link */}
+        <div className="mt-4 text-center">
+          <p className="text-gray-600">
+            Déjà un compte ?{' '}
+            <Link 
+              to="/login" 
+              className="text-[#1E90FF] hover:text-[#187bcd] font-semibold transition-colors"
+            >
+              Se connecter
+            </Link>
+          </p>
+        </div>
       </div>
       <Footer />
     </>
