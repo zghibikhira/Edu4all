@@ -87,6 +87,14 @@ const TeacherDashboard = () => {
       link: "/wallet",
       color: "bg-green-50 border-green-200",
       textColor: "text-green-700"
+    },
+    {
+      title: "Sessions Visio",
+      description: "Créer et gérer des sessions de visioconférence",
+      icon: "🎥",
+      link: "/teacher/video-sessions",
+      color: "bg-indigo-50 border-indigo-200",
+      textColor: "text-indigo-700"
     }
   ];
 

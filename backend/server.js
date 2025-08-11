@@ -12,6 +12,8 @@ const Message = require('./models/message'); // Add this line
 
 const app = express();
 const server = http.createServer(app); // Use http.Server for Socket.IO
+const sessionRoutes = require('./routes/sessionRoutes');
+app.use('/api/sessions', sessionRoutes);//sprint6:etape 1
 
 // Middleware de sécurité
 app.use(helmet());
@@ -45,6 +47,8 @@ const walletRoutes = require('./routes/wallet');
 const paymentRoutes = require('./routes/payments');
 const purchaseRoutes = require('./routes/purchases');
 const messageRoutes = require('./routes/messages');
+const teacherRatingRoutes = require('./routes/teacherRatings');
+const commentRoutes = require('./routes/comments');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
@@ -55,6 +59,8 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/teacher-ratings', teacherRatingRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Serve uploaded videos statically
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')));

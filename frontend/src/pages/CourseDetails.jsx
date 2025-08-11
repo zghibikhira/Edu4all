@@ -1,5 +1,6 @@
 import { useState } from 'react';
 // import { useParams } from 'react-router-dom';
+import { useCart } from "../contexts/CartContext";
 
 const CourseDetails = () => {
   // const { id } = useParams(); // Will be used when connecting to real API
@@ -112,6 +113,13 @@ const CourseDetails = () => {
     ]
   };
 
+  const { addToCart } = useCart();
+
+  const handleAddToCart = () => {
+    addToCart(course);
+    alert("Ajouté au panier !");
+  };
+
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'curriculum', label: 'Curriculum' },
@@ -171,8 +179,11 @@ const CourseDetails = () => {
                   <span className="bg-red-500 text-white px-2 py-1 rounded text-sm">50% OFF</span>
                 </div>
 
-                <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold mb-4">
-                  Enroll Now
+                <button
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold mb-4"
+                  onClick={handleAddToCart}
+                >
+                  Ajouter au panier
                 </button>
 
                 <div className="space-y-3 text-sm">

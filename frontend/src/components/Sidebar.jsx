@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 
 const Sidebar = ({ open, onClose }) => {
   const { user } = useAuth();
+  const { cart } = useCart();
 
   const menuItems = [
     { label: 'Home', link: '/' },
@@ -37,6 +39,21 @@ const Sidebar = ({ open, onClose }) => {
           <Link key={item.label} to={item.link} className="py-3 px-2 rounded-lg font-inter text-base hover:bg-primary/10 hover:text-primary transition-colors" onClick={onClose}>{item.label}</Link>
         ))}
       </nav>
+      {/* Cart Section */}
+      <div className="mt-8 px-6">
+        <h3 className="font-bold text-lg mb-2 text-primary">My Basket</h3>
+        {cart.length === 0 ? (
+          <p className="text-gray-500 text-sm">Your basket is empty.</p>
+        ) : (
+          <ul className="space-y-2 max-h-40 overflow-y-auto pr-2">
+            {cart.map((item, idx) => (
+              <li key={idx} className="bg-primary/5 rounded p-2 text-sm">
+                {item.title || item.name || JSON.stringify(item)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </aside>
   );
 };

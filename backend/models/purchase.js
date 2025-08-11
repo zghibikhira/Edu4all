@@ -125,7 +125,7 @@ purchaseSchema.statics.findUserPurchases = function(userId, options = {}) {
   }
   
   return this.find(query)
-    .populate('course', 'title description instructor')
+    .populate('course', 'title description instructor price settings')
     .sort({ purchasedAt: -1 })
     .limit(options.limit || 10)
     .skip(options.skip || 0);
@@ -138,7 +138,7 @@ purchaseSchema.statics.hasUserPurchased = function(userId, courseId, type = 'ful
     type: type,
     status: 'completed',
     accessGranted: true
-  });
+  }).populate('course', 'title description instructor price settings');
 };
 
 module.exports = mongoose.model('Purchase', purchaseSchema); 

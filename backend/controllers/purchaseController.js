@@ -101,20 +101,37 @@ const downloadPurchasedFile = async (req, res) => {
     // Incrémenter le compteur de téléchargements
     await purchase.incrementDownloadCount(fileId);
     
-    // Retourner l'URL du fichier
-    res.json({
-      success: true,
-      data: {
-        fileUrl: purchasedFile.fileUrl,
-        filename: purchasedFile.originalName,
-        fileType: purchasedFile.fileType
-      }
-    });
+    // Si c'est une URL externe (Cloudinary, etc.), rediriger
+    if (purchasedFile.fileUrl.startsWith('http')) {
+      return res.redirect(purchasedFile.fileUrl);
+    }
+    
+    // Si c'est un fichier local, le servir
+    const path = require('path');
+    const fs = require('fs');
+    
+    const filePath = path.join(__dirname, '..', 'uploads', purchasedFile.fileUrl);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fichier non trouvé sur le serveur'
+      });
+    }
+    
+    // Définir les headers pour le téléchargement
+    res.setHeader('Content-Disposition', `attachment; filename="${purchasedFile.originalName}"`);
+    res.setHeader('Content-Type', purchasedFile.fileType || 'application/octet-stream');
+    
+    // Créer un stream de lecture et l'envoyer
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
   } catch (error) {
     console.error('Erreur downloadPurchasedFile:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors du téléchargement'
+        message: 'Erreur lors du téléchargement'
     });
   }
 };

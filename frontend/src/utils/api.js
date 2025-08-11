@@ -89,3 +89,8 @@ export const studentAPI = {
   // Mettre à jour le profil étudiant
   updateProfile: (profileData) => api.put('/auth/student/profile', profileData),
 }; 
+
+export const purchaseAPI = {
+  // Acheter un cours
+  purchaseCourse: (courseId) => api.post(`/purchases/purchase/${courseId}`),
+}; 

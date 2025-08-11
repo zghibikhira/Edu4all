@@ -6,7 +6,8 @@ const {
   checkCoursePurchase,
   downloadPurchasedFile,
   getPurchaseStats,
-  requestRefund
+  requestRefund,
+  purchaseCourse
 } = require('../controllers/purchaseController');
 
 // Routes protégées (authentification requise)
@@ -26,5 +27,8 @@ router.get('/download/:courseId/:fileId', downloadPurchasedFile);
 
 // Demander un remboursement
 router.post('/refund', requestRefund);
+
+// Acheter un cours
+router.post('/purchase/:courseId', purchaseCourse);
 
 module.exports = router; 
