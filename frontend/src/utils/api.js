@@ -73,12 +73,18 @@ export const statsAPI = {
 
 // Services pour les enseignants
 export const teacherAPI = {
-  getAll: () => api.get('/auth/teachers'),
+  getAll: (query = '') => api.get(`/auth/teachers${query}`),
   // Obtenir le profil enseignant
   getProfile: () => api.get('/auth/teacher/profile'),
   
   // Mettre à jour le profil enseignant
   updateProfile: (profileData) => api.put('/auth/teacher/profile', profileData),
+  // Dashboard endpoints (role enseignant)
+  getDashboardSummary: (query = '') => api.get(`/teachers/me/dashboard/summary${query}`),
+  getDashboardEarnings: (interval = 'month') => api.get(`/teachers/me/dashboard/earnings?interval=${interval}`),
+  getDashboardRatings: () => api.get('/teachers/me/dashboard/ratings'),
+  getDashboardFollowers: (query = '') => api.get(`/teachers/me/dashboard/followers${query}`),
+  getDashboardPostsEngagement: () => api.get('/teachers/me/dashboard/posts/engagement'),
 };
 
 // Services pour les étudiants
@@ -93,4 +99,85 @@ export const studentAPI = {
 export const purchaseAPI = {
   // Acheter un cours
   purchaseCourse: (courseId) => api.post(`/purchases/purchase/${courseId}`),
-}; 
+};
+
+// Services de notifications
+export const notificationAPI = {
+  // Obtenir les notifications
+  getNotifications: (params) => api.get('/notifications', { params }),
+  
+  // Obtenir le nombre de notifications non lues
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  
+  // Marquer une notification comme lue
+  markAsRead: (notificationId) => api.patch(`/notifications/${notificationId}/read`),
+  
+  // Marquer toutes les notifications comme lues
+  markAllAsRead: () => api.patch('/notifications/mark-all-read'),
+  
+  // Supprimer une notification
+  deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
+};
+
+// Services de préférences utilisateur
+export const preferencesAPI = {
+  // Obtenir les préférences
+  getPreferences: () => api.get('/preferences'),
+  
+  // Mettre à jour les préférences
+  updatePreferences: (preferences) => api.put('/preferences', preferences),
+  
+  // Réinitialiser les préférences
+  resetPreferences: () => api.post('/preferences/reset'),
+};
+
+// Services de plaintes
+export const complaintAPI = {
+  // Créer une plainte
+  createComplaint: (complaintData) => api.post('/complaints', complaintData),
+  
+  // Obtenir les plaintes de l'utilisateur
+  getUserComplaints: (params) => api.get('/complaints/mine', { params }),
+  
+  // Obtenir une plainte par ID
+  getComplaintById: (complaintId) => api.get(`/complaints/${complaintId}`),
+  
+  // Admin: Obtenir toutes les plaintes
+  getAdminComplaints: (params) => api.get('/complaints/admin/all', { params }),
+  
+  // Admin: Mettre à jour une plainte
+  updateComplaint: (complaintId, updateData) => api.patch(`/complaints/admin/${complaintId}`, updateData),
+  
+  // Admin: Escalader une plainte
+  escalateComplaint: (complaintId, escalatedTo) => api.post(`/complaints/admin/${complaintId}/escalate`, { escalatedTo }),
+  
+  // Admin: Obtenir les statistiques des plaintes
+  getComplaintStats: () => api.get('/complaints/admin/stats'),
+  
+  // Admin: Obtenir une URL signée pour une preuve
+  getEvidenceUrl: (complaintId, index) => api.get(`/complaints/admin/${complaintId}/evidence/${index}/url`),
+};
+
+// Services de modération
+export const moderationAPI = {
+  // Créer une action de modération
+  createModerationAction: (actionData) => api.post('/moderation/actions', actionData),
+  
+  // Admin: Obtenir toutes les actions de modération
+  getAdminModerationActions: (params) => api.get('/moderation/actions', { params }),
+  
+  // Obtenir les actions de modération d'un utilisateur
+  getUserModerationActions: (userId, params) => api.get(`/moderation/actions/user/${userId}`, { params }),
+  
+  // Admin: Révoquer une action de modération
+  revokeModerationAction: (actionId, reason) => api.patch(`/moderation/actions/${actionId}/revoke`, { reason }),
+  
+  // Admin: Obtenir les statistiques de modération
+  getModerationStats: () => api.get('/moderation/stats'),
+  
+  // Admin: Vérifier le statut de modération d'un utilisateur
+  checkUserModerationStatus: (userId) => api.get(`/moderation/user/${userId}/status`),
+};
+
+// Export the main api instance for direct use
+export { api }; 

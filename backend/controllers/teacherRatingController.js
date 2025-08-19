@@ -2,146 +2,120 @@ const TeacherRating = require('../models/teacherRating');
 const User = require('../models/user');
 const Course = require('../models/course');
 
-// Créer une évaluation d'enseignant
-exports.createTeacherRating = async (req, res) => {
+const createTeacherRating = async (req, res) => {
   try {
-    const {
-      teacherId,
-      courseId,
-      overallRating,
-      criteria,
-      comment,
-      wouldRecommend
-    } = req.body;
-
+    const { teacherId, courseId, overallRating, criteria, comment, wouldRecommend } = req.body;
     const studentId = req.user.id;
 
-    // Vérifier que l'utilisateur est un étudiant
-    if (req.user.role !== 'etudiant') {
-      return res.status(403).json({
-        success: false,
-        message: 'Seuls les étudiants peuvent évaluer les enseignants'
-      });
-    }
-
-    // Vérifier que l'enseignant existe
-    const teacher = await User.findById(teacherId);
-    if (!teacher || teacher.role !== 'enseignant') {
-      return res.status(404).json({
-        success: false,
-        message: 'Enseignant non trouvé'
-      });
-    }
-
-    // Vérifier que l'étudiant n'a pas déjà évalué cet enseignant pour ce cours
+    // Check if student has already rated this teacher
     const existingRating = await TeacherRating.findOne({
       student: studentId,
-      teacher: teacherId,
-      course: courseId
+      teacher: teacherId
     });
 
     if (existingRating) {
       return res.status(400).json({
         success: false,
-        message: 'Vous avez déjà évalué cet enseignant pour ce cours'
+        message: 'Vous avez déjà évalué cet enseignant'
       });
     }
 
-    // Créer l'évaluation
-    const rating = new TeacherRating({
+    // Validate teacher exists and is actually a teacher
+    const teacher = await User.findById(teacherId);
+    if (!teacher || teacher.role !== 'enseignant') {
+      return res.status(400).json({
+        success: false,
+        message: 'Enseignant non trouvé ou invalide'
+      });
+    }
+
+    // Validate course if provided
+    if (courseId) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cours non trouvé'
+        });
+      }
+    }
+
+    // Create the rating
+    const teacherRating = new TeacherRating({
       student: studentId,
       teacher: teacherId,
       course: courseId,
       overallRating,
-      criteria: criteria || {},
+      criteria,
       comment,
       wouldRecommend
     });
 
-    await rating.save();
+    await teacherRating.save();
 
-    // Mettre à jour les statistiques de l'enseignant
+    // Update teacher stats
     await updateTeacherStats(teacherId);
 
     res.status(201).json({
       success: true,
       message: 'Évaluation créée avec succès',
-      data: rating
+      data: teacherRating
     });
-
   } catch (error) {
-    console.error('Erreur lors de la création de l\'évaluation:', error);
+    console.error('Error creating teacher rating:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la création de l\'évaluation',
+      error: error.message
     });
   }
 };
 
-// Obtenir les évaluations d'un enseignant
-exports.getTeacherRatings = async (req, res) => {
+const getTeacherRatings = async (req, res) => {
   try {
     const { teacherId } = req.params;
     const { page = 1, limit = 10, status = 'approved' } = req.query;
 
-    // Vérifier que l'enseignant existe
-    const teacher = await User.findById(teacherId);
-    if (!teacher || teacher.role !== 'enseignant') {
-      return res.status(404).json({
-        success: false,
-        message: 'Enseignant non trouvé'
-      });
-    }
+    const skip = (page - 1) * limit;
 
+    // Build query
     const query = { teacher: teacherId };
     if (status !== 'all') {
       query.status = status;
     }
 
     const ratings = await TeacherRating.find(query)
-      .populate('student', 'firstName lastName avatar')
+      .populate('student', 'firstName lastName email')
       .populate('course', 'title')
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(parseInt(limit));
 
     const total = await TeacherRating.countDocuments(query);
 
     res.json({
       success: true,
-      data: {
-        ratings,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit)
-        }
+      data: ratings,
+      pagination: {
+        current: parseInt(page),
+        total: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1
       }
     });
-
   } catch (error) {
-    console.error('Erreur lors de la récupération des évaluations:', error);
+    console.error('Error getting teacher ratings:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la récupération des évaluations',
+      error: error.message
     });
   }
 };
 
-// Obtenir les statistiques d'un enseignant
-exports.getTeacherStats = async (req, res) => {
+const getTeacherStats = async (req, res) => {
   try {
     const { teacherId } = req.params;
-
-    // Vérifier que l'enseignant existe
-    const teacher = await User.findById(teacherId);
-    if (!teacher || teacher.role !== 'enseignant') {
-      return res.status(404).json({
-        success: false,
-        message: 'Enseignant non trouvé'
-      });
-    }
 
     const stats = await TeacherRating.getTeacherStats(teacherId);
 
@@ -149,61 +123,40 @@ exports.getTeacherStats = async (req, res) => {
       success: true,
       data: stats
     });
-
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques:', error);
+    console.error('Error getting teacher stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la récupération des statistiques',
+      error: error.message
     });
   }
 };
 
-// Obtenir les meilleurs enseignants
-exports.getTopTeachers = async (req, res) => {
+const getTopTeachers = async (req, res) => {
   try {
     const { limit = 10 } = req.query;
 
     const topTeachers = await TeacherRating.getTopTeachers(parseInt(limit));
 
-    // Populate teacher information
-    const teachersWithInfo = await Promise.all(
-      topTeachers.map(async (teacher) => {
-        const teacherInfo = await User.findById(teacher._id, 'firstName lastName avatar subjects');
-        return {
-          ...teacher.toObject(),
-          teacher: teacherInfo
-        };
-      })
-    );
-
     res.json({
       success: true,
-      data: teachersWithInfo
+      data: topTeachers
     });
-
   } catch (error) {
-    console.error('Erreur lors de la récupération des meilleurs enseignants:', error);
+    console.error('Error getting top teachers:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la récupération des meilleurs enseignants',
+      error: error.message
     });
   }
 };
 
-// Modérer une évaluation (admin seulement)
-exports.moderateRating = async (req, res) => {
+const moderateRating = async (req, res) => {
   try {
     const { ratingId } = req.params;
     const { status, moderationReason } = req.body;
-
-    // Vérifier que l'utilisateur est admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès non autorisé'
-      });
-    }
 
     const rating = await TeacherRating.findById(ratingId);
     if (!rating) {
@@ -220,7 +173,7 @@ exports.moderateRating = async (req, res) => {
 
     await rating.save();
 
-    // Mettre à jour les statistiques de l'enseignant
+    // Update teacher stats after moderation
     await updateTeacherStats(rating.teacher);
 
     res.json({
@@ -228,18 +181,17 @@ exports.moderateRating = async (req, res) => {
       message: 'Évaluation modérée avec succès',
       data: rating
     });
-
   } catch (error) {
-    console.error('Erreur lors de la modération:', error);
+    console.error('Error moderating rating:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la modération',
+      error: error.message
     });
   }
 };
 
-// Supprimer une évaluation (étudiant ou admin)
-exports.deleteRating = async (req, res) => {
+const deleteRating = async (req, res) => {
   try {
     const { ratingId } = req.params;
     const userId = req.user.id;
@@ -252,46 +204,47 @@ exports.deleteRating = async (req, res) => {
       });
     }
 
-    // Vérifier les permissions
+    // Check if user can delete this rating
     if (rating.student.toString() !== userId && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Accès non autorisé'
+        message: 'Vous n\'êtes pas autorisé à supprimer cette évaluation'
       });
     }
 
     await TeacherRating.findByIdAndDelete(ratingId);
 
-    // Mettre à jour les statistiques de l'enseignant
+    // Update teacher stats after deletion
     await updateTeacherStats(rating.teacher);
 
     res.json({
       success: true,
       message: 'Évaluation supprimée avec succès'
     });
-
   } catch (error) {
-    console.error('Erreur lors de la suppression:', error);
+    console.error('Error deleting rating:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur lors de la suppression',
+      error: error.message
     });
   }
 };
 
-// Fonction helper pour mettre à jour les statistiques d'un enseignant
+// Helper function to update teacher stats in User model
 async function updateTeacherStats(teacherId) {
   try {
     const stats = await TeacherRating.getTeacherStats(teacherId);
     
-    // Mettre à jour le modèle User avec les nouvelles statistiques
     await User.findByIdAndUpdate(teacherId, {
-      'stats.averageRating': Math.round(stats.averageRating * 10) / 10,
-      'stats.totalRatings': stats.totalRatings,
-      'stats.recommendationRate': Math.round(stats.recommendationRate * 100)
+      'teacherStats.averageRating': stats.averageRating,
+      'teacherStats.totalRatings': stats.totalRatings,
+      'teacherStats.ratingDistribution': stats.ratingDistribution,
+      'teacherStats.recommendationRate': stats.recommendationRate,
+      'teacherStats.criteriaAverages': stats.criteriaAverages
     });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des statistiques:', error);
+    console.error('Error updating teacher stats:', error);
   }
 }
 

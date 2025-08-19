@@ -78,6 +78,14 @@ const userSchema = new mongoose.Schema({
       type: Number, 
       default: 0 
     },
+    followersCount: {
+      type: Number,
+      default: 0
+    },
+    postsCount: {
+      type: Number,
+      default: 0
+    },
     rank: { 
       type: String, 
       enum: ['Prof', 'Superprof', 'Hyperprof'],
@@ -139,6 +147,15 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  
+  // Modération
+  bannedAt: Date,
+  bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  banReason: String,
+  suspendedAt: Date,
+  suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  suspensionReason: String,
+  suspensionExpiresAt: Date,
   
   // Métadonnées
   lastLogin: { 

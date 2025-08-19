@@ -10,7 +10,7 @@ const JWT_EXPIRE = '7d';
 
 // Générer un token JWT
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
+  return jwt.sign({ userId, id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
 };
 
 // Validation des données d'inscription

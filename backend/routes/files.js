@@ -40,7 +40,7 @@ router.post('/videos/upload', authenticateToken, authorizeRoles('enseignant'), v
 // Get all videos
 router.get('/videos', async (req, res) => {
   try {
-    const videos = await Video.find().populate('teacher', 'nom prenom email');
+    const videos = await Video.find().populate('teacher', 'firstName lastName email');
     res.json(videos);
   } catch (err) {
     res.status(500).json({ message: err.message });

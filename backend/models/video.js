@@ -10,7 +10,7 @@ const videoSchema = new mongoose.Schema({
   },
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Enseignant',
+    ref: 'User',
     required: true,
   },
   subject: {

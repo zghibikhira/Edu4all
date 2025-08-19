@@ -3,6 +3,7 @@ const User = require('../models/user');
 const Purchase = require('../models/purchase');
 const Wallet = require('../models/wallet');
 const { v4: uuidv4 } = require('uuid');
+const notificationService = require('../services/notificationService');
 
 // Create a new video session (teacher only)
 const createSession = async (req, res) => {
@@ -373,6 +374,44 @@ const enrollInSession = async (req, res) => {
     session.students.push(req.user._id);
     
     await session.save();
+
+    // Send notifications
+    try {
+      // Notify student about successful enrollment
+      await notificationService.createAndSendNotification({
+        userId: req.user._id,
+        type: 'SESSION_BOOKED',
+        title: `Session réservée: ${session.title}`,
+        body: `Vous êtes maintenant inscrit à la session "${session.title}" prévue pour le ${new Date(session.date).toLocaleDateString('fr-FR')}.`,
+        link: `/sessions/${session._id}`,
+        metadata: {
+          entityType: 'session',
+          entityId: session._id,
+          sessionDate: session.date,
+          courseTitle: session.title,
+          teacherName: session.teacherId?.firstName + ' ' + session.teacherId?.lastName
+        }
+      });
+
+      // Notify teacher about new enrollment
+      await notificationService.createAndSendNotification({
+        userId: session.teacherId,
+        type: 'SESSION_BOOKED',
+        title: `Nouvelle inscription: ${session.title}`,
+        body: `${req.user.firstName} ${req.user.lastName} s'est inscrit à votre session "${session.title}".`,
+        link: `/teacher/video-sessions/${session._id}`,
+        metadata: {
+          entityType: 'session',
+          entityId: session._id,
+          sessionDate: session.date,
+          courseTitle: session.title,
+          studentName: req.user.firstName + ' ' + req.user.lastName
+        }
+      });
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Don't fail the enrollment if notifications fail
+    }
 
     res.json({
       success: true,

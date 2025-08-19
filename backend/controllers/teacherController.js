@@ -43,3 +43,35 @@ exports.getAllTeachers = async (req, res) => {
     });
   }
 }; 
+
+// GET /api/teachers/:teacherId
+// Returns public teacher profile information
+exports.getTeacherById = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+
+    // Find user by id (most profiles will be teachers, but don’t hard-fail on role)
+    const teacher = await User.findById(teacherId)
+      .select(
+        'firstName lastName email avatar bio role teacherInfo.subjects teacherInfo.education teacherInfo.experience teacherInfo.rating teacherInfo.totalReviews teacherInfo.followersCount teacherInfo.postsCount teacherInfo.rank teacherInfo.availability'
+      );
+
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enseignant non trouvé'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: teacher
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération du profil enseignant:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération du profil enseignant.'
+    });
+  }
+};

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { teacherAPI } from '../utils/api';
-import { FaChalkboardTeacher, FaEnvelope, FaBook, FaGraduationCap, FaSearch } from 'react-icons/fa';
+import { FaChalkboardTeacher, FaEnvelope, FaBook, FaGraduationCap, FaSearch, FaEye } from 'react-icons/fa';
 
 // Exemples de matières et niveaux (à adapter selon ta base)
 const SUBJECTS = [
@@ -149,6 +150,13 @@ const TeachersList = () => {
               <div className="text-xs text-gray-400 mt-2">
                 {teacher.teacherInfo?.rank ? `Rang : ${teacher.teacherInfo.rank}` : ''}
               </div>
+              <Link 
+                to={`/teacher/${teacher._id}`}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <FaEye />
+                Voir le profil
+              </Link>
             </div>
           ))}
         </div>

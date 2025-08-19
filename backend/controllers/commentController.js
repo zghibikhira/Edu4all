@@ -1,5 +1,6 @@
 const Comment = require('../models/comment');
 const User = require('../models/user');
+const Post = require('../models/post');
 
 // Créer un commentaire
 exports.createComment = async (req, res) => {
@@ -60,6 +61,13 @@ exports.createComment = async (req, res) => {
     if (parentComment) {
       await Comment.findByIdAndUpdate(parentComment, {
         $push: { replies: comment._id }
+      });
+    }
+
+    // Si c'est un commentaire sur un post, incrémenter le compteur de commentaires
+    if (entityType === 'post') {
+      await Post.findByIdAndUpdate(entityId, {
+        $inc: { 'engagement.commentsCount': 1 }
       });
     }
 
@@ -231,6 +239,13 @@ exports.deleteComment = async (req, res) => {
     if (comment.parentComment) {
       await Comment.findByIdAndUpdate(comment.parentComment, {
         $pull: { replies: commentId }
+      });
+    }
+
+    // Si c'est un commentaire sur un post, décrémenter le compteur de commentaires
+    if (comment.entityType === 'post') {
+      await Post.findByIdAndUpdate(comment.entityId, {
+        $inc: { 'engagement.commentsCount': -1 }
       });
     }
 
@@ -448,15 +463,4 @@ exports.searchComments = async (req, res) => {
   }
 };
 
-module.exports = {
-  createComment,
-  getComments,
-  getComment,
-  updateComment,
-  deleteComment,
-  addReaction,
-  flagComment,
-  moderateComment,
-  getCommentStats,
-  searchComments
-};
+// All functions are already exported using exports.functionName above

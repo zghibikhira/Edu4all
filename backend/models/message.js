@@ -86,7 +86,7 @@ messageSchema.statics.getRoomMessages = function(room, limit = 50, offset = 0) {
     room: room,
     deleted: false 
   })
-  .populate('sender', 'name email role')
+  .populate('sender', 'firstName lastName email role')
   .sort({ createdAt: -1 })
   .limit(limit)
   .skip(offset)
@@ -101,8 +101,8 @@ messageSchema.statics.getDirectMessages = function(user1Id, user2Id, limit = 50,
     ],
     deleted: false
   })
-  .populate('sender', 'name email role')
-  .populate('receiver', 'name email role')
+  .populate('sender', 'firstName lastName email role')
+  .populate('receiver', 'firstName lastName email role')
   .sort({ createdAt: -1 })
   .limit(limit)
   .skip(offset)
@@ -114,7 +114,7 @@ messageSchema.statics.getCourseMessages = function(courseId, limit = 50, offset 
     courseId: courseId,
     deleted: false
   })
-  .populate('sender', 'name email role')
+  .populate('sender', 'firstName lastName email role')
   .sort({ createdAt: -1 })
   .limit(limit)
   .skip(offset)

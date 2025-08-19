@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const Header = () => {
   const { user } = useAuth();
@@ -22,12 +23,9 @@ const Header = () => {
           <Link to="/blog" className="hover:text-primary">Blog</Link>
           <Link to="/contact" className="hover:text-primary">Contact</Link>
           
-          {/* Show Chat and Wallet for logged-in users */}
-          {user && (
-            <>
-              <Link to="/chat" className="hover:text-primary">Chat</Link>
-              <Link to="/wallet" className="hover:text-primary">Wallet</Link>
-            </>
+          {/* Show Feed for logged-in students */}
+          {user && user.role === 'etudiant' && (
+            <Link to="/feed" className="hover:text-primary">Feed</Link>
           )}
         </nav>
         
@@ -35,6 +33,7 @@ const Header = () => {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <NotificationBell />
               <Link to="/dashboard" className="btn-primary hidden md:inline-block">Dashboard</Link>
               <button 
                 onClick={() => {

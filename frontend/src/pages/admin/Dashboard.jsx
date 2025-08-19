@@ -29,6 +29,17 @@ const AdminDashboard = () => (
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-xl font-semibold mb-4">Gestion des plaintes</h3>
+        <p className="text-gray-600 mb-4">Modérez les plaintes et gérez les actions de modération</p>
+        <Link 
+          to="/admin/complaints" 
+          className="inline-block bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+        >
+          Gérer les plaintes
+        </Link>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Configuration</h3>
         <p className="text-gray-600 mb-4">Paramètres de la plateforme</p>
         <button className="inline-block bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors">

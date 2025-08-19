@@ -22,13 +22,19 @@ import TeacherDashboard from './pages/teacher/Dashboard.jsx';
 import VideoSessions from './pages/teacher/VideoSessions.jsx';
 import UploadTeacherVideo from './pages/teacher/UploadTeacherVideo.jsx';
 import DefineSlots from './pages/teacher/DefineSlots.jsx';
+import TeacherProfile from './pages/teacher/TeacherProfile.jsx';
+import EnhancedTeacherProfile from './pages/teacher/EnhancedTeacherProfile.jsx';
+import FeedPage from './pages/Feed.jsx';
 import AdminDashboard from './pages/admin/Dashboard.jsx';
 import AdminUsers from './pages/admin/Users.jsx';
 import Teachers from './pages/Teachers';
 import CreateEvaluation from './pages/CreateEvaluation';
 import FileUploadDemo from './pages/FileUploadDemo';
 import TeacherRatings from './pages/TeacherRatings.jsx';
+import NotificationPreferences from './pages/NotificationPreferences';
 import CalendarView from './components/CalendarView';
+import Complaints from './pages/Complaints';
+import ComplaintsManagement from './pages/admin/ComplaintsManagement';
 import Chat from './components/Chat';
 import Wallet from './components/Wallet';
 import SessionsPage from './pages/SessionsPage';
@@ -63,6 +69,9 @@ export default function App() {
                   <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
                   <Route path="/teacher-dashboard" element={<Protected><TeacherDashboard /></Protected>} />
                   <Route path="/teacher/video-sessions" element={<Protected><VideoSessions /></Protected>} />
+                  <Route path="/teacher/profile" element={<Protected><TeacherProfile /></Protected>} />
+                  <Route path="/teacher/:teacherId" element={<EnhancedTeacherProfile />} />
+                  <Route path="/feed" element={<Protected><FeedPage /></Protected>} />
                   <Route path="/admin-dashboard" element={<Protected><AdminDashboard /></Protected>} />
                   <Route path="/admin/users" element={<Protected><AdminUsers /></Protected>} />
                   <Route path="/evaluations" element={<Protected><StudentEvaluations /></Protected>} />
@@ -71,6 +80,7 @@ export default function App() {
                   <Route path="/evaluations/create" element={<Protected><CreateEvaluation /></Protected>} />
                   <Route path="/file-upload-demo" element={<FileUploadDemo />} />
                   <Route path="/teacher-ratings" element={<TeacherRatings />} />
+                  <Route path="/preferences" element={<Protected><NotificationPreferences /></Protected>} />
                   <Route path="/instructor/:id" element={<InstructorProfile />} />
                   <Route path="/upload-teacher-video" element={<UploadTeacherVideo />} />
                   <Route path="/define-slots" element={<Protected><DefineSlots /></Protected>} />
@@ -79,6 +89,8 @@ export default function App() {
                   <Route path="/chat" element={<Protected><Chat /></Protected>} />
                   <Route path="/wallet" element={<Protected><Wallet /></Protected>} />
                   <Route path="/teacher/sessions" element={<Protected><SessionsPage /></Protected>} />
+                  <Route path="/complaints" element={<Protected><Complaints /></Protected>} />
+                  <Route path="/admin/complaints" element={<Protected><ComplaintsManagement /></Protected>} />
                 </Routes>
               </main>
               <Footer />

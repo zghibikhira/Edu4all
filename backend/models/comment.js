@@ -19,14 +19,14 @@ const commentSchema = new mongoose.Schema({
   // Type de commentaire
   type: {
     type: String,
-    enum: ['course', 'session', 'general', 'question', 'answer'],
+    enum: ['course', 'session', 'general', 'question', 'answer', 'post'],
     default: 'general'
   },
   
   // Référence à l'entité commentée
   entityType: {
     type: String,
-    enum: ['course', 'session', 'user', 'general'],
+    enum: ['course', 'session', 'user', 'general', 'post'],
     required: true
   },
   entityId: {

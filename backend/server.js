@@ -9,9 +9,14 @@ const http = require('http'); // Add this line
 const { Server } = require('socket.io'); // Add this line
 const jwt = require('jsonwebtoken'); // Add this line
 const Message = require('./models/message'); // Add this line
+const User = require('./models/user'); // Add this line
 
 const app = express();
 const server = http.createServer(app); // Use http.Server for Socket.IO
+
+// Initialize Socket.IO globally
+let io;
+
 const sessionRoutes = require('./routes/sessionRoutes');
 app.use('/api/sessions', sessionRoutes);//sprint6:etape 1
 
@@ -49,6 +54,13 @@ const purchaseRoutes = require('./routes/purchases');
 const messageRoutes = require('./routes/messages');
 const teacherRatingRoutes = require('./routes/teacherRatings');
 const commentRoutes = require('./routes/comments');
+const notificationRoutes = require('./routes/notifications');
+const preferencesRoutes = require('./routes/preferences');
+const teacherRoutes = require('./routes/teachers');
+const complaintRoutes = require('./routes/complaints');
+const moderationRoutes = require('./routes/moderation');
+const followRoutes = require('./routes/follows');
+const postRoutes = require('./routes/posts');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
@@ -61,6 +73,13 @@ app.use('/api/purchases', purchaseRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/teacher-ratings', teacherRatingRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/preferences', preferencesRoutes);
+app.use('/api/teachers', teacherRoutes);
+app.use('/api/complaints', complaintRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/follows', followRoutes);
+app.use('/api/posts', postRoutes);
 
 // Serve uploaded videos statically
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')));
@@ -80,7 +99,7 @@ app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')
       res.json({
         success: true,
         message: 'Socket.IO server is running',
-        socketConnections: io.engine.clientsCount
+        socketConnections: io ? io.engine.clientsCount : 0
       });
     });
 
@@ -136,7 +155,7 @@ const startServer = async () => {
     await connectDB();
 
     // --- SOCKET.IO SETUP ---
-    const io = new Server(server, {
+    io = new Server(server, {
       cors: {
         origin: [
           process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -146,6 +165,10 @@ const startServer = async () => {
         credentials: true
       }
     });
+
+    // Initialize notification service with Socket.IO
+    const notificationService = require('./services/notificationService');
+    notificationService.initializeProviders(io);
 
     // Store connected users
     const connectedUsers = new Map();
@@ -164,7 +187,17 @@ const startServer = async () => {
       try {
         const user = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production');
         console.log('Socket auth - User decoded:', user);
-        socket.user = user;
+        
+        // Get full user data from database
+        const fullUser = await User.findById(user.userId || user.id).select('-password');
+        if (!fullUser) {
+          throw new Error('User not found');
+        }
+        
+        socket.user = {
+          ...user,
+          ...fullUser.toObject()
+        };
         next();
       } catch (err) {
         console.error('Socket auth - JWT verification failed:', err.message);
@@ -174,7 +207,7 @@ const startServer = async () => {
 
     io.on('connection', async (socket) => {
       const userId = socket.user.id;
-      const userName = socket.user.name || socket.user.email;
+      const userName = socket.user.firstName ? `${socket.user.firstName} ${socket.user.lastName}` : socket.user.email;
       
       console.log('User connected:', userName, 'ID:', userId);
       

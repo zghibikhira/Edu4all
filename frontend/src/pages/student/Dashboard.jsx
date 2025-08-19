@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import ReportButton from '../../components/ReportButton';
 import FileUploadEnhanced from '../../components/FileUploadEnhanced';
 import EvaluationList from '../../components/EvaluationList';
 import CalendarView from '../../components/CalendarView';
@@ -377,6 +378,15 @@ const Dashboard = () => {
       showFor: ['etudiant']
     },
     {
+      title: "Mes plaintes",
+      description: "Créer et suivre mes réclamations",
+      icon: "🛡️",
+      link: "/complaints",
+      color: "bg-rose-50 border-rose-200",
+      textColor: "text-rose-700",
+      showFor: ['etudiant', 'enseignant']
+    },
+    {
       title: "Sessions Visio",
       description: "Rejoindre des sessions de visioconférence",
       icon: "🎥",
@@ -660,7 +670,7 @@ const Dashboard = () => {
                     <p className="text-gray-700">{comment.text}</p>
                     <span className="text-sm text-gray-500">{comment.date}</span>
                   </div>
-                  <button className="text-red-500 text-sm">Signaler</button>
+                  <ReportButton variant="small" />
                 </div>
               </div>
             ))}

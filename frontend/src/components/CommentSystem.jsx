@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../utils/api';
 import { FaComment, FaReply, FaEdit, FaTrash, FaThumbsUp, FaThumbsDown, FaFlag, FaCheck, FaTimes } from 'react-icons/fa';
 
 const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
@@ -20,23 +21,21 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
 
   const fetchComments = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/comments/${entityType}/${entityId}?page=${page}&limit=10&includeReplies=true`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+      const response = await api.get(`/comments/${entityType}/${entityId}`, {
+        params: {
+          page,
+          limit: 10,
+          includeReplies: true
         }
-      );
-      const data = await response.json();
+      });
       
-      if (data.success) {
+      if (response.data.success) {
         if (page === 1) {
-          setComments(data.data.comments);
+          setComments(response.data.data.comments);
         } else {
-          setComments(prev => [...prev, ...data.data.comments]);
+          setComments(prev => [...prev, ...response.data.data.comments]);
         }
-        setHasMore(data.data.pagination.page < data.data.pagination.pages);
+        setHasMore(response.data.data.pagination.hasNext);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des commentaires:', error);
@@ -50,22 +49,14 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
     if (!newComment.trim()) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/comments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          content: newComment,
-          entityType,
-          entityId,
-          type: 'general'
-        })
+      const response = await api.post('/comments', {
+        content: newComment,
+        entityType,
+        entityId,
+        type: 'general'
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         setNewComment('');
         fetchComments(); // Refresh comments
         if (onCommentUpdate) onCommentUpdate();
@@ -77,23 +68,15 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
 
   const handleSubmitReply = async (parentCommentId, content) => {
     try {
-      const response = await fetch('http://localhost:5000/api/comments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          content,
-          entityType,
-          entityId,
-          parentComment: parentCommentId,
-          type: 'answer'
-        })
+      const response = await api.post('/comments', {
+        content,
+        entityType,
+        entityId,
+        parentComment: parentCommentId,
+        type: 'answer'
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         setShowReplyForm(null);
         fetchComments(); // Refresh comments
         if (onCommentUpdate) onCommentUpdate();
@@ -105,19 +88,11 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
 
   const handleEditComment = async (commentId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          content: editContent
-        })
+      const response = await api.put(`/comments/${commentId}`, {
+        content: editContent
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         setEditingComment(null);
         setEditContent('');
         fetchComments(); // Refresh comments
@@ -129,18 +104,12 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.delete(`/comments/${commentId}`);
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         fetchComments(); // Refresh comments
         if (onCommentUpdate) onCommentUpdate();
       }
@@ -151,17 +120,11 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
 
   const handleReaction = async (commentId, reactionType) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/comments/${commentId}/reaction`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ reactionType })
+      const response = await api.post(`/comments/${commentId}/reaction`, {
+        reactionType
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         fetchComments(); // Refresh comments
       }
     } catch (error) {
@@ -171,17 +134,11 @@ const CommentSystem = ({ entityType, entityId, onCommentUpdate }) => {
 
   const handleFlagComment = async (commentId, reason) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/comments/${commentId}/flag`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ reason: reason || 'Contenu inapproprié' })
+      const response = await api.post(`/comments/${commentId}/flag`, {
+        reason: reason || 'Contenu inapproprié'
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         alert('Commentaire signalé avec succès');
       }
     } catch (error) {

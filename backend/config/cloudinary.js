@@ -31,6 +31,25 @@ const videoStorage = new CloudinaryStorage({
   }
 });
 
+// Configuration pour les preuves (evidence) mixtes
+const evidenceStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Déterminer le dossier et le resource_type selon le mimetype
+    const isVideo = file.mimetype.startsWith('video/');
+    const isImage = file.mimetype.startsWith('image/');
+    const isPdf = file.mimetype === 'application/pdf';
+
+    return {
+      folder: 'edu4all/evidence',
+      type: 'authenticated',
+      resource_type: isVideo ? 'video' : isImage ? 'image' : 'raw',
+      allowed_formats: ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'],
+      transformation: [{ quality: 'auto' }]
+    };
+  }
+});
+
 // Configuration pour les avatars
 const avatarStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -91,9 +110,30 @@ const uploadAvatar = multer({
   }
 });
 
+// Middleware pour upload des preuves (evidence)
+const uploadEvidence = multer({
+  storage: evidenceStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB max par fichier
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/pdf',
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+      'video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm'
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Type de fichier non supporté pour les preuves'), false);
+    }
+  }
+});
+
 module.exports = {
   cloudinary,
   uploadPDF,
   uploadVideo,
-  uploadAvatar
+  uploadAvatar,
+  uploadEvidence
 }; 
