@@ -30,10 +30,14 @@ const VideoSessions = () => {
       const data = await response.json();
       
       if (data.success) {
-        setSessions(data.data.sessions || []);
+        const sessionsData = data.data?.sessions || data.sessions || [];
+        setSessions(Array.isArray(sessionsData) ? sessionsData : []);
+      } else {
+        setSessions([]);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des sessions:', error);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -113,7 +117,7 @@ const VideoSessions = () => {
   };
 
   const handleDeleteSession = async (sessionId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) {
       return;
     }
 
@@ -165,12 +169,12 @@ const VideoSessions = () => {
     return 'unknown';
   };
 
-  const filteredSessions = sessions.filter(session => {
+  const filteredSessions = Array.isArray(sessions) ? sessions.filter(session => {
     const matchesFilter = filter === 'all' || session.status === filter;
-    const matchesSearch = session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = session.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          session.description?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
-  });
+  }) : [];
 
   const sortedSessions = [...filteredSessions].sort((a, b) => new Date(b.date) - new Date(a.date));
 

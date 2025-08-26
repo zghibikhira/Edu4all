@@ -61,6 +61,9 @@ const complaintRoutes = require('./routes/complaints');
 const moderationRoutes = require('./routes/moderation');
 const followRoutes = require('./routes/follows');
 const postRoutes = require('./routes/posts');
+const dashboardRoutes = require('./routes/dashboard');
+const contentRoutes = require('./routes/content');
+const teacherVideoRoutes = require('./routes/teacherVideos');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
@@ -80,6 +83,9 @@ app.use('/api/complaints', complaintRoutes);
 app.use('/api/moderation', moderationRoutes);
 app.use('/api/follows', followRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/teacher-videos', teacherVideoRoutes);
 
 // Serve uploaded videos statically
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')));
@@ -286,7 +292,7 @@ const startServer = async () => {
         if (!content || content.trim().length === 0) return;
         
         try {
-          // Create message in database
+          // Create and persist message
           const message = new Message({
             sender: userId,
             receiver: receiverId,
@@ -295,26 +301,9 @@ const startServer = async () => {
             content: content.trim(),
             messageType: messageType
           });
-          
-          // Temporarily disable database saving for testing
-          // await message.save();
-          
-          // Create a mock message object for testing
-          const mockMessage = {
-            _id: Date.now().toString(),
-            sender: { _id: userId, name: userName, email: socket.user.email, role: socket.user.role },
-            receiver: receiverId,
-            courseId: courseId,
-            room: room,
-            content: content.trim(),
-            messageType: messageType,
-            createdAt: new Date(),
-            edited: false
-          };
-          
-          // Populate sender info for mock message
-          // await message.populate('sender', 'name email role');
-          
+          await message.save();
+          await message.populate('sender', 'firstName lastName email role');
+
           // Determine target room
           let targetRoom = room;
           if (receiverId) {
@@ -323,17 +312,17 @@ const startServer = async () => {
             targetRoom = `course_${courseId}`;
           }
           
-          // Broadcast message to room
+          // Broadcast persisted message
           io.to(targetRoom).emit('newMessage', {
-            _id: mockMessage._id,
-            sender: mockMessage.sender,
-            receiver: mockMessage.receiver,
-            courseId: mockMessage.courseId,
-            room: mockMessage.room,
-            content: mockMessage.content,
-            messageType: mockMessage.messageType,
-            createdAt: mockMessage.createdAt,
-            edited: mockMessage.edited
+            _id: message._id,
+            sender: message.sender,
+            receiver: message.receiver,
+            courseId: message.courseId,
+            room: message.room,
+            content: message.content,
+            messageType: message.messageType,
+            createdAt: message.createdAt,
+            edited: message.edited
           });
           
           // Stop typing indicator

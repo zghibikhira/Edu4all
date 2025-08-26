@@ -90,8 +90,13 @@ const EnhancedTeacherProfile = () => {
 
             {/* Basic Info */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-gray-900">
-                {teacher.firstName} {teacher.lastName}
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <span>{teacher.firstName} {teacher.lastName}</span>
+                {teacher.teacherInfo?.rank && (
+                  <span className={`text-xs px-2 py-1 rounded-full border ${teacher.teacherInfo.rank === 'Hyperprof' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : teacher.teacherInfo.rank === 'Superprof' ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
+                    {teacher.teacherInfo.rank}
+                  </span>
+                )}
               </h1>
               <p className="text-lg text-gray-600 mt-1">
                 {teacher.teacherInfo?.subjects?.join(', ')}
@@ -100,12 +105,12 @@ const EnhancedTeacherProfile = () => {
                 <div className="flex items-center">
                   <span className="text-yellow-400">★</span>
                   <span className="ml-1 text-gray-700">
-                    {teacher.teacherInfo?.rating?.toFixed(1) || 'N/A'}
+                    {(teacher.teacherInfo?.metrics?.avgRating ?? teacher.teacherInfo?.rating)?.toFixed?.(1) || 'N/A'}
                   </span>
                 </div>
                 <span className="text-gray-500">•</span>
                 <span className="text-gray-700">
-                  {teacher.teacherInfo?.totalReviews || 0} avis
+                  {(teacher.teacherInfo?.metrics?.reviewsCount ?? teacher.teacherInfo?.totalReviews) || 0} avis
                 </span>
                 <span className="text-gray-500">•</span>
                 <span className="text-gray-700">
@@ -287,6 +292,18 @@ const EnhancedTeacherProfile = () => {
                   <p className="text-gray-600">
                     {teacher.teacherInfo.availability.timezone}
                   </p>
+                </div>
+              )}
+
+              {teacher.teacherInfo?.metrics && (
+                <div className="mt-6">
+                  <h4 className="font-medium text-gray-900 mb-2">Statistiques publiques</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span>Score classement</span><span>{teacher.teacherInfo.rankingScore?.toFixed?.(0) || 0}</span></div>
+                    <div className="flex justify-between"><span>Sessions complétées</span><span>{teacher.teacherInfo.metrics.sessionsCompleted || 0}</span></div>
+                    <div className="flex justify-between"><span>Taux d'annulation</span><span>{Math.round((teacher.teacherInfo.metrics.cancellationRate || 0) * 100)}%</span></div>
+                    <div className="flex justify-between"><span>Taux de litiges</span><span>{Math.round((teacher.teacherInfo.metrics.disputeRate || 0) * 100)}%</span></div>
+                  </div>
                 </div>
               )}
 

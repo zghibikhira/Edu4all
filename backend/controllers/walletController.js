@@ -1,5 +1,6 @@
 const Wallet = require('../models/wallet');
 const User = require('../models/user');
+const PayoutRequest = require('../models/payoutRequest');
 
 // Obtenir le wallet d'un utilisateur
 const getWallet = async (req, res) => {

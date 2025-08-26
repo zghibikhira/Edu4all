@@ -48,6 +48,7 @@ const purchaseSchema = new mongoose.Schema({
     originalName: String,
     fileType: String,
     fileUrl: String,
+    cloudinaryId: String,
     downloadCount: {
       type: Number,
       default: 0

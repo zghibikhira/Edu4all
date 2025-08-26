@@ -2,6 +2,33 @@ const Evaluation = require('../models/evaluation');
 const User = require('../models/user');
 const Course = require('../models/course');
 
+// Fonction pour mettre à jour les statistiques d'un enseignant
+const updateTeacherStats = async (teacherId) => {
+  try {
+    const stats = await Evaluation.aggregate([
+      { $match: { teacher: teacherId, status: 'publié' } },
+      {
+        $group: {
+          _id: null,
+          totalEvaluations: { $sum: 1 },
+          averageScore: { $avg: '$score' },
+          averagePercentage: { $avg: '$percentage' }
+        }
+      }
+    ]);
+
+    if (stats.length > 0) {
+      await User.findByIdAndUpdate(teacherId, {
+        'teacherInfo.totalEvaluations': stats[0].totalEvaluations,
+        'teacherInfo.averageScore': Math.round(stats[0].averageScore * 100) / 100,
+        'teacherInfo.averagePercentage': Math.round(stats[0].averagePercentage * 100) / 100
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des statistiques:', error);
+  }
+};
+
 // Créer une nouvelle évaluation
 exports.createEvaluation = async (req, res) => {
   try {
@@ -59,6 +86,9 @@ exports.createEvaluation = async (req, res) => {
     });
 
     await evaluation.save();
+
+    // Mettre à jour les statistiques de l'enseignant
+    await updateTeacherStats(teacherId);
 
     res.status(201).json({
       success: true,
@@ -281,6 +311,9 @@ exports.gradeEvaluation = async (req, res) => {
     evaluation.gradedAt = new Date();
 
     await evaluation.save();
+
+    // Mettre à jour les statistiques de l'enseignant
+    await updateTeacherStats(teacherId);
 
     res.json({
       success: true,

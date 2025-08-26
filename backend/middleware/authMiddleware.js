@@ -31,11 +31,11 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Vérifier si l'utilisateur est actif
-    if (!user.isActive) {
+    // Vérifier si l'utilisateur est actif et non banni
+    if (!user.isActive || user.status === 'BANNED' || user.isDeleted) {
       return res.status(401).json({
         success: false,
-        message: 'Compte désactivé'
+        message: user.isDeleted ? 'Compte supprimé' : (user.status === 'BANNED' ? 'Compte banni' : 'Compte désactivé')
       });
     }
 
@@ -75,7 +75,15 @@ const authorizeRoles = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    // Normalize common role aliases (en->fr) for robustness
+    const aliasMap = {
+      teacher: 'enseignant',
+      student: 'etudiant',
+      admin: 'admin'
+    };
+    const userRole = aliasMap[req.user.role] || req.user.role;
+
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         success: false,
         message: 'Accès non autorisé'

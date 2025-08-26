@@ -5,6 +5,7 @@ const {
   getUserPurchases,
   checkCoursePurchase,
   downloadPurchasedFile,
+  getCourseFiles,
   getPurchaseStats,
   requestRefund,
   purchaseCourse
@@ -15,6 +16,9 @@ router.use(authenticateToken);
 
 // Obtenir les achats d'un utilisateur
 router.get('/', getUserPurchases);
+
+// Obtenir les fichiers d'un cours acheté
+router.get('/course/:courseId/files', getCourseFiles);
 
 // Obtenir les statistiques d'achat
 router.get('/stats', getPurchaseStats);

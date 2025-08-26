@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const sessionController = require('../controllers/sessionController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Secure all session routes
 router.use(authenticateToken);
@@ -14,6 +14,9 @@ router.get('/', sessionController.getUserSessions);
 
 // Get a specific session by ID
 router.get('/:id', sessionController.getSessionById);
+
+// Admin: sessions series for charts
+router.get('/admin/series', authorizeRoles('admin'), sessionController.getAdminSessionsSeries);
 
 // Update a session (teacher only)
 router.put('/:id', sessionController.updateSession);

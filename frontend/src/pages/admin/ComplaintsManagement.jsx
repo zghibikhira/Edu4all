@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaExclamationTriangle, FaEye, FaClock, FaCheck, FaTimes, FaArrowUp, FaFilter, FaSearch, FaEdit, FaBan, FaChartBar } from 'react-icons/fa';
+import { FaExclamationTriangle, FaEye, FaClock, FaCheck, FaTimes, FaArrowUp, FaFilter, FaSearch, FaEdit, FaBan, FaChartBar, FaUpload } from 'react-icons/fa';
 import { complaintAPI, moderationAPI } from '../../utils/api';
 import ComplaintForm from '../../components/ComplaintForm';
 

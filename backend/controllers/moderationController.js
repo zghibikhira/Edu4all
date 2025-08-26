@@ -61,10 +61,45 @@ exports.createModerationAction = async (req, res) => {
     // Update user status based on action type
     if (type === 'BAN') {
       targetUser.isActive = false;
+      targetUser.status = 'BANNED';
       targetUser.bannedAt = new Date();
       targetUser.bannedBy = adminId;
       targetUser.banReason = reason;
+      targetUser.ban = {
+        reason,
+        byAdminId: adminId,
+        createdAt: new Date(),
+        expiresAt: duration > 0 ? new Date(Date.now() + duration * 60 * 60 * 1000) : null
+      };
       await targetUser.save();
+
+      // Auto-cancel future sessions and notify participants (best effort)
+      try {
+        const Session = require('../models/session');
+        const notificationService = require('../services/notificationService');
+        const futureSessions = await Session.find({
+          $or: [
+            { teacherId: targetUserId },
+            { students: targetUserId },
+            { enrolledStudents: targetUserId }
+          ],
+          date: { $gte: new Date() },
+          status: { $in: ['scheduled', 'ongoing'] }
+        }).lean();
+
+        for (const s of futureSessions) {
+          await Session.updateOne({ _id: s._id }, { $set: { status: 'cancelled', cancellationReason: 'User banned by admin' } });
+          const recipients = [
+            ...(s.enrolledStudents || []).map(id => ({ userId: id, studentName: '' })),
+            ...(s.students || []).map(id => ({ userId: id, studentName: '' })),
+            { userId: s.teacherId, studentName: '' }
+          ].filter(r => String(r.userId) !== String(targetUserId));
+
+          await notificationService.createSessionNotification('SESSION_CANCELLED', s, recipients);
+        }
+      } catch (e) {
+        console.error('Error auto-cancelling sessions on BAN:', e);
+      }
     } else if (type === 'SUSPEND') {
       targetUser.isActive = false;
       targetUser.suspendedAt = new Date();
@@ -96,7 +131,7 @@ exports.createModerationAction = async (req, res) => {
         userId: targetUserId,
         type: 'MODERATION_ACTION',
         title: actionMessages[type] || 'Action de modération',
-        body: `Raison: ${reason}`,
+        body: `Raison: ${reason}${type === 'BAN' ? '\nPour faire appel, contactez le support.' : ''}`,
         link: '/profile',
         metadata: {
           entityType: 'moderation',
@@ -252,9 +287,11 @@ exports.revokeModerationAction = async (req, res) => {
       const targetUser = await User.findById(action.targetUserId);
       if (targetUser) {
         targetUser.isActive = true;
+        targetUser.status = 'ACTIVE';
         targetUser.bannedAt = undefined;
         targetUser.bannedBy = undefined;
         targetUser.banReason = undefined;
+        targetUser.ban = undefined;
         targetUser.suspendedAt = undefined;
         targetUser.suspendedBy = undefined;
         targetUser.suspensionReason = undefined;

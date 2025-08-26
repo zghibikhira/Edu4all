@@ -76,7 +76,7 @@ const PostCard = ({ post, onPostUpdated, onPostDeleted }) => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce post ?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce post ?')) {
       return;
     }
 

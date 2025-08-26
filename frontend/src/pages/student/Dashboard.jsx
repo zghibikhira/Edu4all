@@ -1,968 +1,1041 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import ReportButton from '../../components/ReportButton';
-import FileUploadEnhanced from '../../components/FileUploadEnhanced';
-import EvaluationList from '../../components/EvaluationList';
-import CalendarView from '../../components/CalendarView';
-import ChatSummary from '../../components/ChatSummary';
-import WalletSummary from '../../components/WalletSummary';
-import jsPDF from 'jspdf';
-import EvaluationForm from '../../components/EvaluationForm';
+import StudentRatings from '../../components/StudentRatings';
+import { 
+  FaUser, 
+  FaBook, 
+  FaCalendar, 
+  FaWallet, 
+  FaUpload, 
+  FaSearch, 
+  FaStar,
+  FaComment, 
+  FaExclamationTriangle,
+  FaHistory,
+  FaComments,
+  FaPlus,
+  FaFilter,
+  FaClock,
+  FaEuroSign,
+  FaHeart,
+  FaShare,
+  FaEdit,
+  FaTrash,
+  FaCheck,
+  FaTimes,
+  FaBell,
+  FaCog,
+  FaChartLine,
+  FaGraduationCap,
+  FaUsers,
+  FaFileAlt,
+  FaVideo,
+  FaImage,
+  FaCrown,
+  FaMedal,
+  FaTrophy,
+  FaPaperPlane,
+  FaAward,
+  FaHandPaper,
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaVideoSlash,
+  FaUserMinus,
+  FaUserCheck,
+  FaUserPlus,
+  FaDesktop,
+  FaPencilAlt,
+  FaEraser,
+  FaUndo,
+  FaRedo,
+  FaSave,
+  FaExpand,
+  FaCompress,
+  FaStop,
+  FaPhoneSlash,
+  FaPhone,
+  
+  FaEllipsisH,
+  FaLock,
+  FaUnlock,
+  FaDownload,
+  FaCamera,
+  FaVolumeUp,
+  FaVolumeMute,
+  
+  
+  FaSmile,
+  FaFile,
+  
+  FaFlag,
+  FaThumbsUp,
+  FaReply,
+  FaEye,
+  FaBookmark
+} from 'react-icons/fa';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [uploadResults, setUploadResults] = useState([]);
-  const [bookedMeetings, setBookedMeetings] = useState([]);
-  const [loadingMeetings, setLoadingMeetings] = useState(false);
-  const [purchasedCourses, setPurchasedCourses] = useState([]);
-  const [instructorRatings, setInstructorRatings] = useState([]);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [courseFilter, setCourseFilter] = useState('all');
-  const [isExportingPDF, setIsExportingPDF] = useState(false);
-  const [showEvalForm, setShowEvalForm] = useState(false);
-  const [evalFormCourse, setEvalFormCourse] = useState(null);
-  const [evalFormSession, setEvalFormSession] = useState(null);
-  const [evalFormTeacher, setEvalFormTeacher] = useState(null);
-  const [evalSuccess, setEvalSuccess] = useState(false);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [teachers, setTeachers] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [upcomingMeetings, setUpcomingMeetings] = useState([]);
+  const [teacherPosts, setTeacherPosts] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
 
-  // Fetch student's booked meetings
   useEffect(() => {
-    if (user && user.role === 'etudiant') {
-      setLoadingMeetings(true);
-      fetch(`http://localhost:5000/api/meetings/student/${user._id}`)
-        .then(res => res.json())
-        .then(data => {
-          setBookedMeetings(data);
-          setLoadingMeetings(false);
-        })
-        .catch(err => {
-          console.error('Error fetching meetings:', err);
-          setLoadingMeetings(false);
-        });
+    if (user && isAuthenticated) {
+      loadDashboardData();
     }
-  }, [user]);
+  }, [user, isAuthenticated]);
 
-  // Fetch purchased courses
-  useEffect(() => {
-    if (user && user.role === 'etudiant') {
-      fetch(`http://localhost:5000/api/purchases`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setPurchasedCourses(data.data?.purchases || []);
-          }
-        })
-        .catch(err => console.error('Error fetching purchases:', err));
-    }
-  }, [user]);
-
-  // Fetch instructor ratings
-  useEffect(() => {
-    fetch(`http://localhost:5000/api/evaluations/stats`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          // Mock instructor ratings for now
-          setInstructorRatings([
-            { name: 'John Doe', rating: 5 },
-            { name: 'Emily Clark', rating: 5 },
-            { name: 'Michael Lee', rating: 5 },
-            { name: 'Sarah Brown', rating: 4 }
-          ]);
-        }
-      })
-      .catch(err => console.error('Error fetching ratings:', err));
-  }, []);
-
-  // Fetch comments
-  useEffect(() => {
-    // Mock comments for now
-    setComments([
-      { id: 1, author: 'Alice Williams', text: 'Thanks for great courses!', date: '2023-07-22' },
-      { id: 2, author: 'David Miller', text: 'Very informative session.', date: '2023-07-21' },
-      { id: 3, author: 'Jessica Taylor', text: 'Could you provide more examples?', date: '2023-07-20' }
-    ]);
-  }, []);
-
-  const handleFileUpload = (results) => {
-    setUploadResults(results);
-  };
-
-  const handlePostComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        author: `${user.firstName} ${user.lastName}`,
-        text: newComment,
-        date: new Date().toISOString().split('T')[0]
-      };
-      setComments([comment, ...comments]);
-      setNewComment('');
-    }
-  };
-
-  const handleExportPDF = () => {
-    if (filteredCourses.length === 0) {
-      alert('Aucun cours à exporter');
-      return;
-    }
-
-    setIsExportingPDF(true);
-    
-    // Simulate a small delay for better UX
-    setTimeout(() => {
-      try {
-        const doc = new jsPDF();
-        
-        // Add title with styling
-        doc.setFontSize(24);
-        doc.setTextColor(44, 62, 80);
-        doc.text('Historique des Cours Achetés', 20, 25);
-        
-        // Add student info
-        doc.setFontSize(12);
-        doc.setTextColor(52, 73, 94);
-        doc.text(`Étudiant: ${user.firstName} ${user.lastName}`, 20, 40);
-        doc.text(`Email: ${user.email}`, 20, 48);
-        doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 56);
-        
-        // Add separator line
-        doc.setDrawColor(52, 73, 94);
-        doc.line(20, 65, 190, 65);
-        
-        // Create table header
-        doc.setFontSize(14);
-        doc.setTextColor(44, 62, 80);
-        doc.text('Cours achetés:', 20, 80);
-        
-        // Table headers
-        doc.setFontSize(10);
-        doc.setTextColor(52, 73, 94);
-        doc.text('N°', 20, 95);
-        doc.text('Titre du cours', 35, 95);
-        doc.text('Date d\'achat', 120, 95);
-        doc.text('Prix', 170, 95);
-        
-        // Table header line
-        doc.line(20, 100, 190, 100);
-        
-        // Add course data
-        let yPosition = 110;
-        let pageNumber = 1;
-        
-        filteredCourses.forEach((course, index) => {
-          // Check if we need a new page
-          if (yPosition > 250) {
-            doc.addPage();
-            yPosition = 20;
-            pageNumber++;
-            
-            // Add page header
-            doc.setFontSize(12);
-            doc.setTextColor(52, 73, 94);
-            doc.text(`Page ${pageNumber}`, 20, 15);
-          }
-          
-          // Course number
-          doc.setFontSize(10);
-          doc.setTextColor(44, 62, 80);
-          doc.text(`${index + 1}`, 20, yPosition);
-          
-          // Course title (truncate if too long)
-          const title = course.course?.title || 'Cours';
-          const truncatedTitle = title.length > 30 ? title.substring(0, 30) + '...' : title;
-          doc.text(truncatedTitle, 35, yPosition);
-          
-          // Purchase date
-          const purchaseDate = new Date(course.purchasedAt).toLocaleDateString('fr-FR');
-          doc.text(purchaseDate, 120, yPosition);
-          
-          // Price
-          const price = course.course?.price ? `${course.course.price} €` : 'N/A';
-          doc.text(price, 170, yPosition);
-          
-          yPosition += 12;
-        });
-        
-        // Add summary at the end
-        doc.setFontSize(12);
-        doc.setTextColor(44, 62, 80);
-        doc.text(`Total des cours achetés: ${filteredCourses.length}`, 20, yPosition + 10);
-        
-        // Add footer
-        doc.setFontSize(8);
-        doc.setTextColor(127, 140, 141);
-        doc.text('Généré par Edu4All Platform', 20, 280);
-        
-        // Save the PDF with a descriptive filename
-        const filename = `historique-cours-${user.firstName}-${user.lastName}-${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(filename);
-        
-        // Show success message
-        alert(`PDF exporté avec succès: ${filename}`);
+    const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Simuler le chargement des données
+      await Promise.all([
+        loadTeachers(),
+        loadEvaluations(),
+        loadPurchases(),
+        loadWalletData(),
+        loadUpcomingMeetings(),
+        loadTeacherPosts(),
+        loadComplaints(),
+        loadChatMessages()
+      ]);
       } catch (error) {
-        console.error('Erreur lors de l\'export PDF:', error);
-        alert('Erreur lors de l\'export PDF. Veuillez réessayer.');
-      } finally {
-        setIsExportingPDF(false);
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+        setLoading(false);
       }
-    }, 500);
+    };
+
+  const loadTeachers = async () => {
+    // Mock data pour les enseignants
+    setTeachers([
+      {
+        _id: '1',
+        firstName: 'Marie',
+        lastName: 'Dubois',
+        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        subjects: ['Mathématiques', 'Physique'],
+        level: 'Lycée',
+        rating: 4.8,
+        hourlyRate: 45,
+        isOnline: true,
+        followers: 1250,
+        posts: 23
+      },
+      {
+        _id: '2',
+        firstName: 'Jean',
+        lastName: 'Martin',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        subjects: ['Histoire', 'Géographie'],
+        level: 'Collège',
+        rating: 4.6,
+        hourlyRate: 35,
+        isOnline: false,
+        followers: 890,
+        posts: 15
+      },
+      {
+        _id: '3',
+        firstName: 'Sophie',
+        lastName: 'Bernard',
+        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+        subjects: ['Anglais', 'Espagnol'],
+        level: 'Tous niveaux',
+        rating: 4.9,
+        hourlyRate: 50,
+        isOnline: true,
+        followers: 2100,
+        posts: 45
+      }
+    ]);
   };
 
-  const filteredCourses = purchasedCourses.filter(course => {
-    if (courseFilter === 'all') return true;
-    if (courseFilter === 'recent') {
-      const purchaseDate = new Date(course.purchasedAt);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return purchaseDate > thirtyDaysAgo;
-    }
-    return true;
-  });
-
-  const renderStars = (rating) => {
-    return '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+  const loadEvaluations = async () => {
+    setEvaluations([
+      {
+        _id: '1',
+        title: 'Devoir de Mathématiques',
+        subject: 'Mathématiques',
+        teacher: 'Marie Dubois',
+        grade: 85,
+        maxGrade: 100,
+        feedback: 'Excellent travail ! Continuez comme ça.',
+        date: '2024-01-15',
+        status: 'completed'
+      },
+      {
+        _id: '2',
+        title: 'Contrôle d\'Histoire',
+        subject: 'Histoire',
+        teacher: 'Jean Martin',
+        grade: 78,
+        maxGrade: 100,
+        feedback: 'Bon travail, quelques erreurs de dates à corriger.',
+        date: '2024-01-10',
+        status: 'completed'
+      }
+    ]);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Accès non autorisé</h2>
-          <p className="text-gray-600">Veuillez vous connecter pour accéder au tableau de bord.</p>
-          <Link to="/login" className="mt-4 inline-block px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-            Se connecter
-          </Link>
+  const loadPurchases = async () => {
+    setPurchases([
+      {
+        _id: '1',
+        courseTitle: 'Cours de Mathématiques Avancées',
+        teacher: 'Marie Dubois',
+        price: 29.99,
+        purchaseDate: '2024-01-05',
+        status: 'completed',
+        files: ['cours_math.pdf', 'exercices.pdf']
+      },
+      {
+        _id: '2',
+        courseTitle: 'Méthodologie Histoire',
+        teacher: 'Jean Martin',
+        price: 19.99,
+        purchaseDate: '2024-01-02',
+        status: 'completed',
+        files: ['methodologie_histoire.pdf']
+      }
+    ]);
+  };
+
+  const loadWalletData = async () => {
+    setWalletBalance(125.50);
+  };
+
+  const loadUpcomingMeetings = async () => {
+    setUpcomingMeetings([
+      {
+        _id: '1',
+        teacher: 'Marie Dubois',
+        subject: 'Mathématiques',
+        date: '2024-01-20',
+        time: '14:00',
+        duration: 60,
+        price: 45,
+        status: 'confirmed'
+      },
+      {
+        _id: '2',
+        teacher: 'Sophie Bernard',
+        subject: 'Anglais',
+        date: '2024-01-22',
+        time: '16:00',
+        duration: 45,
+        price: 50,
+        status: 'pending'
+      }
+    ]);
+  };
+
+  const loadTeacherPosts = async () => {
+    setTeacherPosts([
+      {
+        _id: '1',
+        teacher: 'Marie Dubois',
+        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        content: 'Nouveau cours disponible : Trigonométrie pour le lycée. Inscrivez-vous vite !',
+        likes: 45,
+        comments: 12,
+        date: '2024-01-15',
+        isLiked: false
+      },
+      {
+        _id: '2',
+        teacher: 'Sophie Bernard',
+        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+        content: 'Conseils pour améliorer votre prononciation en anglais. Vidéo disponible !',
+        likes: 67,
+        comments: 23,
+        date: '2024-01-14',
+        isLiked: true
+      }
+    ]);
+  };
+
+  const loadComplaints = async () => {
+    setComplaints([
+      {
+        _id: '1',
+        type: 'refund',
+        subject: 'Demande de remboursement',
+        description: 'Cours non conforme à la description',
+        status: 'pending',
+        date: '2024-01-12'
+      }
+    ]);
+  };
+
+  const loadChatMessages = async () => {
+    setChatMessages([
+      {
+        _id: '1',
+        sender: 'Marie Dubois',
+        message: 'Bonjour ! Avez-vous des questions sur le cours ?',
+        timestamp: '2024-01-15T10:30:00Z',
+        isTeacher: true
+      },
+      {
+        _id: '2',
+        sender: 'Vous',
+        message: 'Oui, j\'ai une question sur l\'exercice 3',
+        timestamp: '2024-01-15T10:32:00Z',
+        isTeacher: false
+      }
+    ]);
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'Vue d\'ensemble', icon: FaChartLine },
+    { id: 'evaluations', label: 'Mes Évaluations', icon: FaStar },
+    { id: 'teachers', label: 'Enseignants', icon: FaUsers },
+    { id: 'bookings', label: 'Réservations', icon: FaCalendar },
+    { id: 'profile', label: 'Mon Profil', icon: FaUser },
+    { id: 'uploads', label: 'Mes Fichiers', icon: FaUpload },
+    { id: 'wallet', label: 'Mon Portefeuille', icon: FaWallet },
+    { id: 'posts', label: 'Posts & Follows', icon: FaHeart },
+    { id: 'complaints', label: 'Réclamations', icon: FaExclamationTriangle },
+    { id: 'chat', label: 'Messages', icon: FaComments },
+    { id: 'ratings', label: 'Noter enseignants/cours', icon: FaAward },
+    { id: 'history', label: 'Historique', icon: FaHistory }
+  ];
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <FaStar className="text-blue-600 text-xl" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Moyenne</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">4.7/5</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+              <FaBook className="text-green-600 text-xl" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cours Achetés</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{purchases.length}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+              <FaCalendar className="text-purple-600 text-xl" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Sessions</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{upcomingMeetings.length}</p>
+            </div>
         </div>
       </div>
-    );
-  }
 
-  const stats = [
-    {
-      title: "Évaluations",
-      value: user.role === 'enseignant' ? "12 créées" : "8 assignées",
-      icon: "📊",
-      color: "bg-blue-500",
-      link: "/evaluations"
-    },
-    {
-      title: "Cours",
-      value: user.role === 'enseignant' ? "5 enseignés" : `${purchasedCourses.length} achetés`,
-      icon: "📚",
-      color: "bg-green-500",
-      link: "/courses"
-    },
-    {
-      title: "Meetings",
-      value: user.role === 'etudiant' ? `${bookedMeetings.length} réservés` : "Fichiers",
-      icon: user.role === 'etudiant' ? "📅" : "📁",
-      color: "bg-purple-500",
-      link: user.role === 'etudiant' ? "#meetings" : "#files"
-    },
-    {
-      title: "Progression",
-      value: user.role === 'etudiant' ? "78%" : "92%",
-      icon: "📈",
-      color: "bg-orange-500",
-      link: "#progress"
-    }
-  ];
-
-  const quickActions = [
-    {
-      title: "Créer une évaluation",
-      description: "Assigner un nouveau devoir ou projet",
-      icon: "📝",
-      link: "/evaluations/create",
-      color: "bg-blue-50 border-blue-200",
-      textColor: "text-blue-700",
-      showFor: ['enseignant']
-    },
-    {
-      title: "Créer un créneau",
-      description: "Définir vos disponibilités pour les meetings",
-      icon: "🗓️",
-      link: "/define-slots",
-      color: "bg-teal-50 border-teal-200",
-      textColor: "text-teal-700",
-      showFor: ['enseignant']
-    },
-    {
-      title: "Réserver un meeting",
-      description: "Voir les créneaux disponibles et réserver",
-      icon: "📅",
-      link: "/calendar",
-      color: "bg-green-50 border-green-200",
-      textColor: "text-green-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Upload de fichiers",
-      description: "Partager des documents ou vidéos",
-      icon: "📤",
-      link: "#files",
-      color: "bg-green-50 border-green-200",
-      textColor: "text-green-700",
-      showFor: ['enseignant', 'etudiant']
-    },
-    {
-      title: "Voir mes évaluations",
-      description: "Consulter et gérer les évaluations",
-      icon: "📋",
-      link: "/evaluations",
-      color: "bg-purple-50 border-purple-200",
-      textColor: "text-purple-700",
-      showFor: ['enseignant', 'etudiant']
-    },
-    {
-      title: "Mon profil",
-      description: "Modifier mes informations personnelles",
-      icon: "👤",
-      link: "/profile",
-      color: "bg-orange-50 border-orange-200",
-      textColor: "text-orange-700",
-      showFor: ['enseignant', 'etudiant']
-    },
-    {
-      title: "Voir les enseignants",
-      description: "Consulter la liste des enseignants",
-      icon: "👨‍🏫",
-      link: "/teachers",
-      color: "bg-cyan-50 border-cyan-200",
-      textColor: "text-cyan-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Mes meetings",
-      description: "Voir mes créneaux réservés",
-      icon: "📅",
-      link: "#meetings",
-      color: "bg-indigo-50 border-indigo-200",
-      textColor: "text-indigo-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Chat",
-      description: "Discuter avec les autres utilisateurs",
-      icon: "💬",
-      link: "/chat",
-      color: "bg-blue-50 border-blue-200",
-      textColor: "text-blue-700",
-      showFor: ['etudiant', 'enseignant']
-    },
-    {
-      title: "Mon Wallet",
-      description: "Gérer mon solde et mes transactions",
-      icon: "💰",
-      link: "/wallet",
-      color: "bg-green-50 border-green-200",
-      textColor: "text-green-700",
-      showFor: ['etudiant', 'enseignant']
-    },
-    {
-      title: "Historique des achats",
-      description: "Consulter tous mes cours achetés",
-      icon: "📚",
-      link: "/purchase-history",
-      color: "bg-blue-50 border-blue-200",
-      textColor: "text-blue-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Mes plaintes",
-      description: "Créer et suivre mes réclamations",
-      icon: "🛡️",
-      link: "/complaints",
-      color: "bg-rose-50 border-rose-200",
-      textColor: "text-rose-700",
-      showFor: ['etudiant', 'enseignant']
-    },
-    {
-      title: "Sessions Visio",
-      description: "Rejoindre des sessions de visioconférence",
-      icon: "🎥",
-      link: "/student/video-sessions",
-      color: "bg-purple-50 border-purple-200",
-      textColor: "text-purple-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Évaluer les Enseignants",
-      description: "Donner votre avis sur les enseignants",
-      icon: "⭐",
-      link: "/teacher-ratings",
-      color: "bg-yellow-50 border-yellow-200",
-      textColor: "text-yellow-700",
-      showFor: ['etudiant']
-    },
-    {
-      title: "Uploader une vidéo",
-      description: "Ajouter une vidéo de cours ou d'introduction",
-      icon: "🎥",
-      link: "/upload-teacher-video",
-      color: "bg-indigo-50 border-indigo-200",
-      textColor: "text-indigo-700",
-      showFor: ['enseignant']
-    }
-  ];
-
-  const recentActivities = [
-    {
-      type: "evaluation",
-      title: "Devoir de mathématiques soumis",
-      time: "Il y a 2 heures",
-      icon: "📝",
-      color: "text-green-600"
-    },
-    {
-      type: "file",
-      title: "Vidéo de cours uploadée",
-      time: "Il y a 1 jour",
-      icon: "🎥",
-      color: "text-blue-600"
-    },
-    {
-      type: "course",
-      title: "Nouveau cours disponible",
-      time: "Il y a 2 jours",
-      icon: "📚",
-      color: "text-purple-600"
-    }
-  ];
-
-  const formatMeetingDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Tableau de bord
-              </h1>
-              <p className="text-gray-600">
-                Bienvenue, {user.firstName} {user.lastName} ({user.role})
-              </p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+              <FaWallet className="text-yellow-600 text-xl" />
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {new Date().toLocaleDateString('fr-FR', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </span>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Solde</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{walletBalance}€</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center text-white text-2xl`}>
-                  {stat.icon}
-                </div>
-              </div>
-              <Link to={stat.link} className="mt-4 inline-block text-sm text-blue-600 hover:text-blue-800">
-                Voir plus →
-              </Link>
-            </div>
-          ))}
+      {/* Upcoming Meetings */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <FaCalendar className="text-blue-600" />
+            Prochaines Sessions
+          </h3>
         </div>
-
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions
-              .filter(action => action.showFor.includes(user.role))
-              .map((action, index) => {
-                if (action.title === 'Upload de fichiers') {
-                  return (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-2 ${action.color} ${action.textColor} hover:shadow-md transition-shadow cursor-pointer`}
-                      onClick={() => navigate('/file-upload-demo')}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{action.icon}</span>
-                        <div>
-                          <h3 className="font-medium">{action.title}</h3>
-                          <p className="text-sm opacity-75">{action.description}</p>
-                        </div>
-                      </div>
+        <div className="p-6">
+          {upcomingMeetings.length > 0 ? (
+            <div className="space-y-4">
+              {upcomingMeetings.map((meeting) => (
+                <div key={meeting._id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <FaClock className="text-blue-600" />
                     </div>
-                  );
-                }
-                if (action.title === 'Mes meetings') {
-                  return (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-2 ${action.color} ${action.textColor} hover:shadow-md transition-shadow cursor-pointer`}
-                      onClick={() => setActiveTab('meetings')}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{action.icon}</span>
-                        <div>
-                          <h3 className="font-medium">{action.title}</h3>
-                          <p className="text-sm opacity-75">{action.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <Link
-                    key={index}
-                    to={action.link}
-                    className={`p-4 rounded-lg border-2 ${action.color} ${action.textColor} hover:shadow-md transition-shadow`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{action.icon}</span>
-                      <div>
-                        <h3 className="font-medium">{action.title}</h3>
-                        <p className="text-sm opacity-75">{action.description}</p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-          </div>
-        </div>
-
-        {/* Sprint 6: Course History, Instructor Ratings, Comments */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Course History */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Historique des Cours Achetés</h3>
-              <div className="flex gap-2">
-                <Link
-                  to="/purchase-history"
-                  className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                >
-                  Voir tout
-                </Link>
-                <button 
-                  onClick={handleExportPDF} 
-                  disabled={isExportingPDF || filteredCourses.length === 0}
-                  className={`px-3 py-1 rounded text-sm ${
-                    isExportingPDF || filteredCourses.length === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-500 text-white hover:bg-green-600'
-                  }`}
-                >
-                  {isExportingPDF 
-                    ? 'Export en cours...' 
-                    : `Export PDF (${filteredCourses.length} cours)`
-                  }
-                </button>
-              </div>
-            </div>
-            <div className="mb-3">
-              <select 
-                value={courseFilter} 
-                onChange={(e) => setCourseFilter(e.target.value)}
-                className="border rounded px-2 py-1 text-sm"
-              >
-                <option value="all">Tous les cours</option>
-                <option value="recent">30 derniers jours</option>
-              </select>
-            </div>
-            {filteredCourses.length > 0 ? (
-              <div className="space-y-3">
-                {filteredCourses.slice(0, 5).map((course) => (
-                  <div key={course._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{course.course?.title || 'Cours'}</div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                        <span>📅 {new Date(course.purchasedAt).toLocaleDateString('fr-FR')}</span>
-                        <span>💰 {course.amount} {course.currency}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          course.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          course.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {course.status === 'completed' ? 'Terminé' : 
-                           course.status === 'pending' ? 'En attente' : 'Échoué'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/course/${course.course?._id}`}
-                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
-                      >
-                        Accéder
-                      </Link>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {meeting.teacher} - {meeting.subject}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {new Date(meeting.date).toLocaleDateString('fr-FR')} à {meeting.time}
+                      </p>
                     </div>
                   </div>
-                ))}
-                {filteredCourses.length > 5 && (
-                  <div className="text-center pt-2">
-                    <Link
-                      to="/purchase-history"
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Voir {filteredCourses.length - 5} cours supplémentaires →
-                    </Link>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {meeting.price}€
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      meeting.status === 'confirmed' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                    }`}>
+                      {meeting.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                    </span>
                   </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">Aucun cours acheté</p>
-            )}
-          </div>
-
-          {/* Instructor Ratings */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Évaluations des Enseignants</h3>
-            <div className="space-y-3">
-              {instructorRatings.map((instructor, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="font-medium">{instructor.name}</span>
-                  <span className="text-yellow-500">{renderStars(instructor.rating)}</span>
                 </div>
               ))}
             </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+              Aucune session programmée
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Teacher Posts */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <FaHeart className="text-red-600" />
+            Posts Récents des Enseignants
+          </h3>
+        </div>
+        <div className="p-6">
+          {teacherPosts.length > 0 ? (
+            <div className="space-y-4">
+              {teacherPosts.slice(0, 3).map((post) => (
+                <div key={post._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <img 
+                      src={post.avatar} 
+                      alt={post.teacher}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="font-medium text-gray-900 dark:text-white">{post.teacher}</p>
+                        <span className="text-sm text-gray-500">{post.date}</span>
+                      </div>
+                      <p className="text-gray-700 dark:text-gray-300 mb-3">{post.content}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <button className={`flex items-center gap-1 ${post.isLiked ? 'text-red-600' : 'hover:text-red-600'}`}>
+                          <FaHeart className={post.isLiked ? 'fill-current' : ''} />
+                          {post.likes}
+                        </button>
+                        <span className="flex items-center gap-1">
+                          <FaComment />
+                          {post.comments}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+              Aucun post récent
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderEvaluations = () => (
+    <div className="space-y-6">
+            <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mes Évaluations</h2>
+        <Link to="/evaluations" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          Voir Toutes
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {evaluations.map((evaluation) => (
+          <div key={evaluation._id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{evaluation.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{evaluation.subject} - {evaluation.teacher}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">{evaluation.grade}/{evaluation.maxGrade}</div>
+                <div className="text-sm text-gray-500">{evaluation.date}</div>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full" 
+                  style={{ width: `${(evaluation.grade / evaluation.maxGrade) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-700 dark:text-gray-300">{evaluation.feedback}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+    const renderTeachers = () => (
+    <div className="space-y-6">
+            <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Classement des Enseignants</h2>
+        <div className="flex items-center gap-4">
+          <Link to="/teacher-ranking" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Voir Classement Complet
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {teachers.map((teacher, index) => (
+          <div key={teacher._id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow">
+            {/* Header with Rank */}
+            <div className="relative">
+              <div className="absolute top-4 left-4 z-10">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20">
+                  {index < 3 ? (
+                    <>
+                      {index === 0 && <FaCrown className="w-4 h-4" />}
+                      {index === 1 && <FaMedal className="w-4 h-4" />}
+                      {index === 2 && <FaTrophy className="w-4 h-4" />}
+                      Top {index + 1}
+                    </>
+                  ) : (
+                    <>
+                      <FaTrophy className="w-4 h-4" />
+                      Prof
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {index < 3 && (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {index + 1}
+                  </div>
+                </div>
+              )}
+
+              <img 
+                src={teacher.avatar} 
+                alt={`${teacher.firstName} ${teacher.lastName}`}
+                className="w-full h-48 object-cover"
+              />
+              
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                <h3 className="text-lg font-semibold text-white">
+                  {teacher.firstName} {teacher.lastName}
+                </h3>
+                <p className="text-white/80 text-sm">{teacher.subjects.join(', ')}</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <FaStar className="text-yellow-500 w-4 h-4" />
+                    <span className="font-semibold text-gray-900 dark:text-white">{teacher.rating}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Note</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <FaUsers className="text-blue-500 w-4 h-4" />
+                    <span className="font-semibold text-gray-900 dark:text-white">{teacher.followers}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Followers</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <FaEuroSign className="text-green-500 w-4 h-4" />
+                    <span className="font-semibold text-gray-900 dark:text-white">{teacher.hourlyRate}€</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Par heure</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Link 
+                  to={`/teacher/${teacher._id}`}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center text-sm"
+                >
+                  Voir Profil
+                </Link>
+                <Link 
+                  to="/slot-booking"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center text-sm"
+                >
+                  Réserver
+            </Link>
+                <button className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <FaHeart />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderBookings = () => (
+    <div className="space-y-6">
+            <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mes Réservations</h2>
+        <div className="flex gap-2">
+          <Link to="/slot-booking" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Réserver un Créneau
+          </Link>
+          <Link to="/video-sessions" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            Sessions Vidéo
+          </Link>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Créneaux Disponibles</h3>
+        </div>
+        <div className="p-6">
+          <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+            Utilisez le bouton "Réserver un Créneau" pour voir les créneaux disponibles
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mon Profil</h2>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center gap-6 mb-6">
+          <img 
+            src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'} 
+            alt="Avatar"
+            className="w-24 h-24 rounded-full object-cover"
+          />
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {user?.firstName} {user?.lastName}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
+            <p className="text-sm text-gray-500">Étudiant</p>
           </div>
         </div>
 
-        {/* Comments Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h3 className="text-lg font-semibold mb-4">Commentaires</h3>
-          <div className="space-y-3 mb-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="border-b pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-medium">{comment.author}</span>
-                    <p className="text-gray-700">{comment.text}</p>
-                    <span className="text-sm text-gray-500">{comment.date}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Informations Personnelles</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niveau</label>
+                <input 
+                  type="text" 
+                  defaultValue="Lycée" 
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Langues</label>
+                <input 
+                  type="text" 
+                  defaultValue="Français, Anglais" 
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Préférences</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Matières Préférées</label>
+                <input 
+                  type="text" 
+                  defaultValue="Mathématiques, Physique" 
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Budget Max</label>
+                <input 
+                  type="number" 
+                  defaultValue="50" 
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Sauvegarder
+          </button>
+          <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Annuler
+          </button>
+        </div>
+      </div>
+              </div>
+  );
+
+  const renderUploads = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mes Fichiers</h2>
+        <Link to="/file-upload" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <FaUpload className="inline mr-2" />
+          Uploader un Fichier
+            </Link>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
+            <FaUpload className="mx-auto text-gray-400 text-3xl mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Glissez un fichier ici ou cliquez pour sélectionner</p>
+            <p className="text-sm text-gray-500 mt-2">PDF, Images, Vidéos acceptés</p>
+          </div>
+        </div>
+      </div>
+              </div>
+  );
+
+  const renderWallet = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mon Portefeuille</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Solde Actuel</h3>
+          <div className="text-3xl font-bold text-green-600 mb-4">{walletBalance}€</div>
+          <Link to="/wallet" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center">
+            Recharger
+            </Link>
+              </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Options de Recharge</h3>
+          <div className="space-y-3">
+            <Link to="/wallet" className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center">
+              Stripe
+            </Link>
+            <Link to="/wallet" className="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center">
+              PayPal
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPosts = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Posts & Follows</h2>
+        <Link to="/followers-posts" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          Voir Tous les Posts
+        </Link>
+        </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Posts des Enseignants Suivis</h3>
+                    </div>
+        <div className="p-6">
+          {teacherPosts.map((post) => (
+            <div key={post._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <img 
+                  src={post.avatar} 
+                  alt={post.teacher}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="font-medium text-gray-900 dark:text-white">{post.teacher}</p>
+                    <span className="text-sm text-gray-500">{post.date}</span>
+                    </div>
+                  <p className="text-gray-700 dark:text-gray-300 mb-3">{post.content}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <button className={`flex items-center gap-1 ${post.isLiked ? 'text-red-600' : 'hover:text-red-600'}`}>
+                      <FaHeart className={post.isLiked ? 'fill-current' : ''} />
+                      {post.likes}
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-blue-600">
+                      <FaComment />
+                      {post.comments}
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-green-600">
+                      <FaShare />
+                      Partager
+                    </button>
                   </div>
-                  <ReportButton variant="small" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+              </div>
+  );
+
+  const renderComplaints = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Réclamations & Modération</h2>
+        <Link to="/complaints" className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+          Nouvelle Réclamation
+            </Link>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6">
+          {complaints.map((complaint) => (
+            <div key={complaint._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-900 dark:text-white">{complaint.subject}</h3>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  complaint.status === 'pending' 
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                }`}>
+                  {complaint.status === 'pending' ? 'En attente' : 'Résolu'}
+                </span>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300 mb-2">{complaint.description}</p>
+              <p className="text-sm text-gray-500">{complaint.date}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderChat = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Messages</h2>
+        <Link to="/chat" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          Ouvrir Chat Complet
+            </Link>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Chat avec les Enseignants</h3>
+              </div>
+        <div className="p-6">
+          <div className="space-y-4 mb-4">
+            {chatMessages.map((message) => (
+              <div key={message._id} className={`flex ${message.isTeacher ? 'justify-start' : 'justify-end'}`}>
+                <div className={`max-w-xs px-4 py-2 rounded-lg ${
+                  message.isTeacher 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' 
+                    : 'bg-blue-600 text-white'
+                }`}>
+                  <p className="text-sm font-medium mb-1">{message.sender}</p>
+                  <p>{message.message}</p>
+                  <p className="text-xs opacity-75 mt-1">
+                    {new Date(message.timestamp).toLocaleTimeString('fr-FR')}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
+          
           <div className="flex gap-2">
             <input
               type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Écrire un commentaire..."
-              className="flex-1 border rounded px-3 py-2"
+              placeholder="Tapez votre message..."
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-            <button 
-              onClick={handlePostComment}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Poster
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              Envoyer
             </button>
           </div>
         </div>
+      </div>
+              </div>
+  );
 
-        {/* Main Content Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'overview', name: 'Vue d\'ensemble', icon: '📊' },
-                { id: 'meetings', name: 'Mes meetings', icon: '📅', showFor: ['etudiant'] },
-                { id: 'evaluations', name: 'Évaluations', icon: '📝' },
-                { id: 'files', name: 'Fichiers', icon: '📁' },
-                { id: 'recent', name: 'Activités récentes', icon: '🕒' }
-              ].filter(tab => !tab.showFor || tab.showFor.includes(user.role))
-                .map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.name}</span>
-                </button>
-              ))}
+  const renderRatings = () => (
+    <div className="space-y-6">
+      <StudentRatings />
+    </div>
+  );
+
+  const renderHistory = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Historique d'Achats</h2>
+        <Link to="/purchase-history" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          Voir Historique Complet
+            </Link>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6">
+          {purchases.map((purchase) => (
+            <div key={purchase._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-900 dark:text-white">{purchase.courseTitle}</h3>
+                <span className="text-green-600 font-semibold">{purchase.price}€</span>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">Enseignant: {purchase.teacher}</p>
+              <p className="text-sm text-gray-500 mb-3">Acheté le {purchase.purchaseDate}</p>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Fichiers inclus:</span>
+                {purchase.files.map((file, index) => (
+                  <span key={index} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                    {file}
+                  </span>
+                ))}
+              </div>
+              
+                             <div className="mt-3 flex gap-2">
+                 <Link to="/purchase-history" className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
+                   Télécharger
+                 </Link>
+                 <Link to="/teacher-ratings" className="px-3 py-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                   Évaluer
+            </Link>
+               </div>
+            </div>
+          ))}
+        </div>
+              </div>
+              </div>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return renderOverview();
+      case 'evaluations':
+        return renderEvaluations();
+      case 'teachers':
+        return renderTeachers();
+      case 'bookings':
+        return renderBookings();
+      case 'profile':
+        return renderProfile();
+      case 'uploads':
+        return renderUploads();
+      case 'wallet':
+        return renderWallet();
+      case 'posts':
+        return renderPosts();
+      case 'complaints':
+        return renderComplaints();
+      case 'chat':
+        return renderChat();
+      case 'ratings':
+        return renderRatings();
+      case 'history':
+        return renderHistory();
+      default:
+        return renderOverview();
+    }
+  };
+
+  if (!user || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+              </div>
+              </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Dashboard Étudiant
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Bienvenue, {user.firstName} ! Gérez vos cours, évaluations et rendez-vous.
+          </p>
+              </div>
+
+        {/* Tabs */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex space-x-8 px-6 overflow-x-auto">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </nav>
           </div>
+        </div>
 
+        {/* Content */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="p-6">
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Recent Activities */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Activités récentes</h3>
-                    <div className="space-y-3">
-                      {recentActivities.map((activity, index) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                          <span className="text-xl">{activity.icon}</span>
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{activity.title}</p>
-                            <p className="text-sm text-gray-500">{activity.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Quick Stats */}
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Statistiques rapides</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                        <span className="text-blue-700">Évaluations en attente</span>
-                        <span className="font-bold text-blue-700">3</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                        <span className="text-green-700">Cours en cours</span>
-                        <span className="font-bold text-green-700">2</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                        <span className="text-purple-700">Meetings réservés</span>
-                        <span className="font-bold text-purple-700">{bookedMeetings.length}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Wallet and Chat Summary */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <WalletSummary />
-                  <ChatSummary />
-                </div>
-                
-                {/* Calendar Integration */}
-                <div>
-                  <CalendarView />
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
-            )}
-
-            {/* Meetings Tab */}
-            {activeTab === 'meetings' && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Mes meetings réservés</h3>
-                {loadingMeetings ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Chargement des meetings...</p>
-                  </div>
-                ) : bookedMeetings.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {bookedMeetings.map((meeting) => (
-                      <div key={meeting._id} className="bg-white border rounded-lg shadow-sm p-6">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-lg">
-                              {meeting.teacher?.firstName?.charAt(0) || 'T'}
-                            </span>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-900">
-                              {meeting.teacher?.firstName} {meeting.teacher?.lastName}
-                            </h4>
-                            <p className="text-sm text-gray-600">{meeting.teacher?.subject || 'Matière non spécifiée'}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-500">📅</span>
-                            <span className="text-sm text-gray-700">{formatMeetingDate(meeting.date)}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-500">📝</span>
-                            <span className="text-sm text-gray-700">{meeting.title}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-500">📧</span>
-                            <span className="text-sm text-gray-700">{meeting.teacher?.email}</span>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Réservé
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <span className="text-4xl mb-4 block">📅</span>
-                    <p className="text-gray-500">Aucun meeting réservé</p>
-                    <p className="text-sm text-gray-400 mt-2">Allez sur le calendrier pour réserver un créneau</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Evaluations Tab */}
-            {activeTab === 'evaluations' && (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Mes évaluations</h3>
-                  {user.role === 'etudiant' && (
-                    <button
-                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                      onClick={() => {
-                        setEvalFormCourse(purchasedCourses[0] ? purchasedCourses[0].course : null);
-                        setEvalFormSession(null);
-                        setEvalFormTeacher(purchasedCourses[0] ? purchasedCourses[0].course?.teacher : null);
-                        setShowEvalForm(true);
-                      }}
-                    >
-                      Évaluer un cours/enseignant
-                    </button>
-                  )}
-                </div>
-                <EvaluationList userRole={user.role} />
-                {/* Modal for EvaluationForm */}
-                {showEvalForm && (
-                  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full relative">
-                      <button
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
-                        onClick={() => setShowEvalForm(false)}
-                      >
-                        &times;
-                      </button>
-                      <EvaluationForm
-                        course={evalFormCourse}
-                        session={evalFormSession}
-                        teacher={evalFormTeacher}
-                        onSubmit={async (data) => {
-                          // Connect to backend
-                          const res = await fetch('/api/evaluations', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${localStorage.getItem('token')}`
-                            },
-                            body: JSON.stringify({
-                              ...data,
-                              studentId: user._id
-                            })
-                          });
-                          if (res.ok) {
-                            setEvalSuccess(true);
-                            setTimeout(() => {
-                              setShowEvalForm(false);
-                              setEvalSuccess(false);
-                            }, 1500);
-                          }
-                        }}
-                      />
-                      {evalSuccess && (
-                        <div className="text-green-600 text-center mt-4 font-semibold">Évaluation envoyée !</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Files Tab */}
-            {activeTab === 'files' && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Gestion des fichiers</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Upload Section */}
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 mb-4">Upload de fichiers</h4>
-                    <FileUploadEnhanced
-                      accept="all"
-                      onUploadComplete={handleFileUpload}
-                      maxFiles={5}
-                      maxSize={50}
-                      showPreview={true}
-                      simulateUpload={false}
-                    />
-                  </div>
-
-                  {/* Upload Results */}
-                  <div>
-                    <h4 className="text-md font-medium text-gray-900 mb-4">Fichiers récents</h4>
-                    {uploadResults.length > 0 ? (
-                      <div className="space-y-2">
-                        {uploadResults.map((result, index) => (
-                          <div key={index} className="p-3 bg-green-50 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-green-600">✅</span>
-                              <span className="font-medium text-green-800">{result.filename}</span>
-                            </div>
-                            <p className="text-sm text-green-600 mt-1">
-                              Uploadé avec succès
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center bg-gray-50 rounded-lg">
-                        <span className="text-4xl mb-4 block">📁</span>
-                        <p className="text-gray-500">Aucun fichier uploadé récemment</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recent Activities Tab */}
-            {activeTab === 'recent' && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Toutes les activités</h3>
-                <div className="space-y-4">
-                  {recentActivities.map((activity, index) => (
-                    <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                      <div className={`w-10 h-10 ${activity.color} bg-opacity-10 rounded-full flex items-center justify-center`}>
-                        <span className="text-xl">{activity.icon}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{activity.title}</p>
-                        <p className="text-sm text-gray-500">{activity.time}</p>
-                      </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm">
-                        Voir détails
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            ) : (
+              renderTabContent()
             )}
           </div>
         </div>

@@ -19,12 +19,19 @@ function SessionsPage() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
       .then(res => res.json())
-      .then(data => setSessions(data.sessions || data))
-      .catch(err => console.error(err));
+      .then(data => {
+        // Ensure sessions is always an array
+        const sessionsData = data.data?.sessions || data.sessions || data || [];
+        setSessions(Array.isArray(sessionsData) ? sessionsData : []);
+      })
+      .catch(err => {
+        console.error(err);
+        setSessions([]);
+      });
   }, []);
 
   // Only show sessions for the current teacher
-  const mySessions = user ? sessions.filter(s => (s.teacherId?._id || s.teacherId) === user._id) : [];
+  const mySessions = user && Array.isArray(sessions) ? sessions.filter(s => (s.teacherId?._id || s.teacherId) === user._id) : [];
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

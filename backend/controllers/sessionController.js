@@ -4,6 +4,7 @@ const Purchase = require('../models/purchase');
 const Wallet = require('../models/wallet');
 const { v4: uuidv4 } = require('uuid');
 const notificationService = require('../services/notificationService');
+const mongoose = require('mongoose');
 
 // Create a new video session (teacher only)
 const createSession = async (req, res) => {
@@ -751,5 +752,23 @@ module.exports = {
   leaveSession,
   cancelSession,
   deleteSession,
-  getSessionStats
+  getSessionStats,
+  // Admin: series of sessions per day for last N days
+  async getAdminSessionsSeries(req, res) {
+    try {
+      if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Accès administrateur requis' });
+      const days = parseInt(req.query.days || '30');
+      const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const series = await Session.aggregate([
+        { $match: { createdAt: { $gte: from } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]);
+      const data = series.map(s => ({ date: s._id, count: s.count }));
+      return res.json({ success: true, data });
+    } catch (e) {
+      console.error('getAdminSessionsSeries error:', e);
+      return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+  }
 };

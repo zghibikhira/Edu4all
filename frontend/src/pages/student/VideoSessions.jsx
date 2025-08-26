@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FaVideo, FaCalendar, FaClock, FaUsers, FaEuroSign, FaPlay, FaEye, FaSignInAlt, FaDownload } from 'react-icons/fa';
+import TeacherRatingForm from '../../components/TeacherRatingForm';
 
 const VideoSessions = () => {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ const VideoSessions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   useEffect(() => {
     if (user && user.role === 'etudiant') {
@@ -27,10 +29,14 @@ const VideoSessions = () => {
       const data = await response.json();
       
       if (data.success) {
-        setSessions(data.data.sessions || []);
+        const sessionsData = data.data?.sessions || data.sessions || [];
+        setSessions(Array.isArray(sessionsData) ? sessionsData : []);
+      } else {
+        setSessions([]);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des sessions:', error);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -101,6 +107,13 @@ const VideoSessions = () => {
     return now >= sessionStart && now <= sessionEnd && session.status === 'scheduled';
   };
 
+  const canRate = (session) => {
+    const now = new Date();
+    const sessionStart = new Date(session.date);
+    const sessionEnd = new Date(sessionStart.getTime() + (session.duration * 60000));
+    return isEnrolled(session) && now > sessionEnd && session.status !== 'cancelled';
+  };
+
   const getTimeStatus = (session) => {
     const now = new Date();
     const sessionStart = new Date(session.date);
@@ -130,14 +143,14 @@ const VideoSessions = () => {
     );
   };
 
-  const filteredSessions = sessions.filter(session => {
+  const filteredSessions = Array.isArray(sessions) ? sessions.filter(session => {
     const matchesFilter = filter === 'all' || session.status === filter;
-    const matchesSearch = session.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = session.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          session.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          session.teacherId?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          session.teacherId?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
-  });
+  }) : [];
 
   const sortedSessions = [...filteredSessions].sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -347,6 +360,16 @@ const VideoSessions = () => {
                         <FaPlay className="mr-2" />
                         Rejoindre maintenant
                       </button>
+                    ) : canRate(session) ? (
+                      <button
+                        onClick={() => {
+                          setSelectedSession(session);
+                          setShowRatingModal(true);
+                        }}
+                        className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
+                      >
+                        Noter la session
+                      </button>
                     ) : (
                       <div className="text-center">
                         <span className="text-sm text-gray-500">
@@ -518,6 +541,48 @@ const VideoSessions = () => {
                   </button>
                 ) : null}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && selectedSession && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Noter la session</h2>
+                <button
+                  onClick={() => setShowRatingModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <TeacherRatingForm
+                teacherId={selectedSession.teacherId?._id || selectedSession.teacherId}
+                sessionId={selectedSession._id}
+                onCancel={() => setShowRatingModal(false)}
+                onSubmit={async (ratingData) => {
+                  const res = await fetch('/api/teacher-ratings', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(ratingData)
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    alert('Merci pour votre évaluation !');
+                    setShowRatingModal(false);
+                  } else {
+                    alert(data.message || 'Erreur lors de l\'envoi de l\'évaluation');
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

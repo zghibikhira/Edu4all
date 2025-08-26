@@ -101,37 +101,133 @@ const downloadPurchasedFile = async (req, res) => {
     // Incrémenter le compteur de téléchargements
     await purchase.incrementDownloadCount(fileId);
     
-    // Si c'est une URL externe (Cloudinary, etc.), rediriger
-    if (purchasedFile.fileUrl.startsWith('http')) {
-      return res.redirect(purchasedFile.fileUrl);
-    }
+    // Générer une URL signée sécurisée pour le téléchargement
+    const cloudinary = require('cloudinary').v2;
     
-    // Si c'est un fichier local, le servir
-    const path = require('path');
-    const fs = require('fs');
-    
-    const filePath = path.join(__dirname, '..', 'uploads', purchasedFile.fileUrl);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
+    try {
+      // Si c'est un fichier Cloudinary, générer une URL signée
+      if (purchasedFile.cloudinaryId) {
+        const signedUrl = cloudinary.url(purchasedFile.cloudinaryId, {
+          sign_url: true,
+          type: 'authenticated',
+          secure: true,
+          expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 heure
+          attachment: true,
+          filename: purchasedFile.originalName
+        });
+        
+        return res.json({
+          success: true,
+          data: {
+            downloadUrl: signedUrl,
+            filename: purchasedFile.originalName,
+            expiresAt: new Date(Date.now() + 3600 * 1000)
+          }
+        });
+      }
+      
+      // Si c'est une URL externe directe, la retourner
+      if (purchasedFile.fileUrl.startsWith('http')) {
+        return res.json({
+          success: true,
+          data: {
+            downloadUrl: purchasedFile.fileUrl,
+            filename: purchasedFile.originalName
+          }
+        });
+      }
+      
+      // Si c'est un fichier local, le servir directement
+      const path = require('path');
+      const fs = require('fs');
+      
+      const filePath = path.join(__dirname, '..', 'uploads', purchasedFile.fileUrl);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Fichier non trouvé sur le serveur'
+        });
+      }
+      
+      // Définir les headers pour le téléchargement
+      res.setHeader('Content-Disposition', `attachment; filename="${purchasedFile.originalName}"`);
+      res.setHeader('Content-Type', purchasedFile.fileType || 'application/octet-stream');
+      
+      // Créer un stream de lecture et l'envoyer
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+      
+    } catch (cloudinaryError) {
+      console.error('Erreur Cloudinary:', cloudinaryError);
+      return res.status(500).json({
         success: false,
-        message: 'Fichier non trouvé sur le serveur'
+        message: 'Erreur lors de la génération du lien de téléchargement'
       });
     }
-    
-    // Définir les headers pour le téléchargement
-    res.setHeader('Content-Disposition', `attachment; filename="${purchasedFile.originalName}"`);
-    res.setHeader('Content-Type', purchasedFile.fileType || 'application/octet-stream');
-    
-    // Créer un stream de lecture et l'envoyer
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
     
   } catch (error) {
     console.error('Erreur downloadPurchasedFile:', error);
     res.status(500).json({
       success: false,
-        message: 'Erreur lors du téléchargement'
+      message: 'Erreur lors du téléchargement'
+    });
+  }
+};
+
+// Obtenir les fichiers accessibles d'un cours acheté
+const getCourseFiles = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { courseId } = req.params;
+    
+    // Vérifier que l'utilisateur a acheté le cours
+    const purchase = await Purchase.hasUserPurchased(userId, courseId);
+    
+    if (!purchase) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous devez acheter ce cours pour accéder à ses fichiers'
+      });
+    }
+    
+    // Vérifier que l'utilisateur peut accéder
+    if (!purchase.canDownload()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Votre accès à ce cours a expiré'
+      });
+    }
+    
+    // Retourner la liste des fichiers avec métadonnées
+    const files = purchase.purchasedFiles.map(file => ({
+      fileId: file.fileId,
+      filename: file.filename,
+      originalName: file.originalName,
+      fileType: file.fileType,
+      downloadCount: file.downloadCount,
+      lastDownloaded: file.lastDownloaded,
+      canDownload: true
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        files,
+        course: purchase.course,
+        purchase: {
+          id: purchase._id,
+          purchasedAt: purchase.purchasedAt,
+          accessExpiresAt: purchase.accessExpiresAt
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Erreur getCourseFiles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des fichiers'
     });
   }
 };
@@ -280,6 +376,7 @@ const purchaseCourse = async (req, res) => {
       purchasedFiles: course.files.map(f => ({
         fileId: f._id,
         fileUrl: f.fileUrl,
+        cloudinaryId: f.cloudinaryId,
         originalName: f.originalName,
         fileType: f.fileType
       })),
@@ -356,6 +453,7 @@ module.exports = {
   getUserPurchases,
   checkCoursePurchase,
   downloadPurchasedFile,
+  getCourseFiles,
   getPurchaseStats,
   requestRefund,
   purchaseCourse,

@@ -91,6 +91,20 @@ const userSchema = new mongoose.Schema({
       enum: ['Prof', 'Superprof', 'Hyperprof'],
       default: 'Prof'
     },
+    rankTier: {
+      type: String,
+      enum: ['PROF', 'SUPERPROF', 'HYPERPROF'],
+      default: 'PROF'
+    },
+    rankingScore: { type: Number, default: 0 },
+    metrics: {
+      avgRating: { type: Number, default: 0 },
+      reviewsCount: { type: Number, default: 0 },
+      sessionsCompleted: { type: Number, default: 0 },
+      cancellationRate: { type: Number, default: 0 },
+      disputeRate: { type: Number, default: 0 },
+      revenueTotal: { type: Number, default: 0 }
+    },
     availability: {
       schedule: [{
         day: { type: String, enum: ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'] },
@@ -109,6 +123,17 @@ const userSchema = new mongoose.Schema({
   isActive: { 
     type: Boolean, 
     default: true 
+  },
+  status: {
+    type: String,
+    enum: ['ACTIVE', 'BANNED'],
+    default: 'ACTIVE'
+  },
+  ban: {
+    reason: { type: String },
+    byAdminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date },
+    expiresAt: { type: Date }
   },
   emailVerified: { 
     type: Boolean, 
@@ -147,6 +172,9 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  // Email verification (OTP)
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
   
   // Modération
   bannedAt: Date,
@@ -160,6 +188,15 @@ const userSchema = new mongoose.Schema({
   // Métadonnées
   lastLogin: { 
     type: Date 
+  },
+  // RGPD suppression de compte
+  isDeleted: { type: Boolean, default: false },
+  deletion: {
+    requestedAt: { type: Date },
+    scheduledAt: { type: Date },
+    processedAt: { type: Date },
+    byAdmin: { type: Boolean, default: false },
+    reason: { type: String }
   },
   createdAt: { 
     type: Date, 

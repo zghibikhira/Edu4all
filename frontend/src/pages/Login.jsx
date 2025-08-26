@@ -47,14 +47,17 @@ export default function Login() {
         
         if (user && user.role) {
           console.log('User role:', user.role);
-          switch (user.role) {
+          const role = (user.role || '').toLowerCase();
+          switch (role) {
             case 'enseignant':
-              dashboardPath = '/teacher-dashboard';
+            case 'teacher':
+              dashboardPath = '/teacher/dashboard';
               break;
             case 'admin':
-              dashboardPath = '/admin-dashboard';
+              dashboardPath = '/admin/dashboard';
               break;
             case 'etudiant':
+            case 'student':
             default:
               dashboardPath = '/dashboard';
               break;

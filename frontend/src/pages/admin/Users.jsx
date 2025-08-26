@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../../utils/api';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterRole, setFilterRole] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
-    // Simulate loading users
-    setTimeout(() => {
-      setUsers([
-        { id: 1, name: 'John Doe', email: 'john@example.com', role: 'etudiant', status: 'active' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'enseignant', status: 'active' },
-        { id: 3, name: 'Admin User', email: 'admin@example.com', role: 'admin', status: 'active' },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const load = async () => {
+      try {
+        setLoading(true);
+        const params = {};
+        if (filterRole) params.role = filterRole;
+        if (filterStatus) params.status = filterStatus;
+        const res = await api.get('/auth/admin/users', { params });
+        setUsers(res.data.data || []);
+      } catch (e) {
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [filterRole, filterStatus]);
 
   return (
     <div className="p-8">
@@ -27,6 +36,29 @@ const AdminUsers = () => {
         >
           Retour au dashboard
         </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Rôle</label>
+            <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-full border rounded px-3 py-2">
+              <option value="">Tous</option>
+              <option value="etudiant">Étudiant</option>
+              <option value="enseignant">Enseignant</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full border rounded px-3 py-2">
+              <option value="">Tous</option>
+              <option value="active">Actif</option>
+              <option value="banned">Banni</option>
+              <option value="suspended">Suspendu</option>
+            </select>
+          </div>
+        </div>
       </div>
       
       {loading ? (
@@ -57,9 +89,9 @@ const AdminUsers = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
-                <tr key={user.id}>
+                <tr key={user._id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">{user.email}</div>
@@ -74,12 +106,14 @@ const AdminUsers = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      {user.status}
-                    </span>
+                    {user.isActive ? (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">actif</span>
+                    ) : (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">inactif</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-indigo-600 hover:text-indigo-900 mr-3">Modifier</button>
+                    <button className="text-indigo-600 hover:text-indigo-900 mr-3">Impersonate</button>
                     <button className="text-red-600 hover:text-red-900">Supprimer</button>
                   </td>
                 </tr>

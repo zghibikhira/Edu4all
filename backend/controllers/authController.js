@@ -119,6 +119,16 @@ exports.register = async (req, res) => {
     const user = new User(userData);
     await user.save();
 
+    // Générer OTP email
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const emailVerificationToken = crypto.createHash('sha256').update(otp).digest('hex');
+    user.emailVerificationToken = emailVerificationToken;
+    user.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // TODO: envoyer otp par email (stub)
+    console.log('OTP (dev only):', otp);
+
     // Mettre à jour les statistiques globales
     await updateGlobalStats(role);
 
@@ -173,6 +183,16 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Vérifier l'état du compte
+    if (user.isDeleted) {
+      return res.status(401).json({ success: false, message: 'Compte supprimé' });
+    }
+    if (!user.isActive) {
+      return res.status(401).json({ success: false, message: 'Compte désactivé' });
+    }
+    if (user.status === 'BANNED') {
+      return res.status(401).json({ success: false, message: 'Compte banni' });
+    }
     // Vérifier si le compte est verrouillé
     if (user.isLocked) {
       return res.status(423).json({
@@ -181,8 +201,23 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Vérifier le mot de passe
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Vérifier le mot de passe (garder safe si hash manquant)
+    if (!user.password || typeof user.password !== 'string') {
+      return res.status(401).json({
+        success: false,
+        message: 'Compte invalide: mot de passe manquant. Veuillez réinitialiser votre mot de passe.'
+      });
+    }
+    let isPasswordValid = false;
+    try {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } catch (e) {
+      console.error('bcrypt compare failed:', e.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Format de mot de passe invalide sur le compte. Réinitialisez le mot de passe.'
+      });
+    }
     if (!isPasswordValid) {
       // Incrémenter les tentatives de connexion
       await user.incrementLoginAttempts();
@@ -196,14 +231,13 @@ exports.login = async (req, res) => {
     // Réinitialiser les tentatives de connexion
     await user.resetLoginAttempts();
 
-    // Mettre à jour la dernière connexion
-    user.lastLogin = new Date();
-    await user.save();
+    // Mettre à jour la dernière connexion sans valider tout le schéma
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date(), updatedAt: new Date() }, $unset: { lockUntil: 1 } });
 
     // Générer le token JWT
     const token = generateToken(user._id);
 
-    // Retourner la réponse
+    // Retourner la réponse (normaliser rôle pour front)
     res.json({
       success: true,
       message: 'Connexion réussie !',
@@ -213,7 +247,7 @@ exports.login = async (req, res) => {
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
-          role: user.role,
+          role: (user.role === 'teacher') ? 'enseignant' : (user.role === 'student') ? 'etudiant' : user.role,
           isVerified: user.isVerified,
           avatar: user.avatar
         },
@@ -225,7 +259,7 @@ exports.login = async (req, res) => {
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de la connexion'
+      message: `Erreur serveur lors de la connexion: ${error.message}`
     });
   }
 };
@@ -253,6 +287,24 @@ exports.getProfile = async (req, res) => {
       success: false,
       message: 'Erreur serveur'
     });
+  }
+};
+
+// Admin: list users with filters
+exports.adminListUsers = async (req, res) => {
+  try {
+    const { role, status, page = 1, limit = 20 } = req.query;
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Accès administrateur requis' });
+    const filter = {};
+    if (role) filter.role = role;
+    if (status === 'active') filter.isActive = true;
+    if (status === 'banned') filter.status = 'BANNED';
+    if (status === 'suspended') filter.suspendedAt = { $ne: null };
+    const users = await User.find(filter).select('firstName lastName email role isActive status createdAt');
+    return res.json({ success: true, data: users });
+  } catch (e) {
+    console.error('adminListUsers error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -294,6 +346,74 @@ exports.updateProfile = async (req, res) => {
       success: false,
       message: 'Erreur serveur'
     });
+  }
+};
+
+// Teacher requests account deletion (RGPD)
+exports.requestDeletion = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('role isDeleted deletion stats');
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    if (user.isDeleted) return res.status(400).json({ success: false, message: 'Suppression déjà en cours' });
+
+    // Block if teacher has balance, disputes or scheduled sessions
+    if (user.role === 'enseignant') {
+      const Wallet = require('../models/wallet');
+      const Complaint = require('../models/complaint');
+      const Session = require('../models/session');
+      const wallet = await Wallet.findOne({ user: user._id });
+      const hasBalance = wallet && wallet.balance > 0;
+      const openDisputes = await Complaint.countDocuments({ againstUserId: user._id, status: { $in: ['NEW','UNDER_REVIEW','ESCALATED'] } });
+      const scheduledSessions = await Session.countDocuments({ teacherId: user._id, date: { $gte: new Date() }, status: { $in: ['scheduled','ongoing'] } });
+      if (hasBalance || openDisputes > 0 || scheduledSessions > 0) {
+        return res.status(400).json({ success: false, message: 'Impossible de supprimer: solde non nul, litiges ouverts, ou sessions planifiées' });
+      }
+    }
+
+    const retentionDays = parseInt(process.env.DELETION_RETENTION_DAYS || '30');
+    const scheduledAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
+
+    user.isDeleted = true;
+    user.deletion = { requestedAt: new Date(), scheduledAt, byAdmin: false };
+    await user.save();
+
+    return res.json({ success: true, message: 'Suppression planifiée', data: { scheduledAt } });
+  } catch (e) {
+    console.error('requestDeletion error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// Admin forces deletion
+exports.adminForceDelete = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+
+    user.isDeleted = true;
+    user.deletion = { requestedAt: user.deletion?.requestedAt || new Date(), scheduledAt: new Date(), processedAt: new Date(), byAdmin: true, reason: req.body?.reason };
+    await user.save();
+
+    // Optionally anonymize or export here (placeholder)
+    return res.json({ success: true, message: 'Suppression forcée enregistrée' });
+  } catch (e) {
+    console.error('adminForceDelete error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// Admin deletion queue (users scheduled for deletion)
+exports.getDeletionQueue = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const filter = { isDeleted: true };
+    const users = await User.find(filter).select('firstName lastName email role deletion').sort({ 'deletion.scheduledAt': 1 }).limit(parseInt(limit)).skip((parseInt(page)-1)*parseInt(limit));
+    const total = await User.countDocuments(filter);
+    return res.json({ success: true, data: { users, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total/parseInt(limit)) } } });
+  } catch (e) {
+    console.error('getDeletionQueue error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
@@ -408,6 +528,49 @@ exports.resetPassword = async (req, res) => {
       success: false,
       message: 'Erreur serveur'
     });
+  }
+};
+
+// Demander renvoi OTP email
+exports.resendEmailOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email requis' });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const token = crypto.createHash('sha256').update(otp).digest('hex');
+    user.emailVerificationToken = token;
+    user.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+    console.log('OTP (dev only):', otp);
+    return res.json({ success: true, message: 'OTP renvoyé' });
+  } catch (e) {
+    console.error('resendEmailOtp error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// Vérifier OTP email
+exports.verifyEmailOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ success: false, message: 'Email et OTP requis' });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    const token = crypto.createHash('sha256').update(otp).digest('hex');
+    if (!user.emailVerificationToken || user.emailVerificationToken !== token || (user.emailVerificationExpires && user.emailVerificationExpires < Date.now())) {
+      return res.status(400).json({ success: false, message: 'OTP invalide ou expiré' });
+    }
+    user.emailVerified = true;
+    user.isVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+    return res.json({ success: true, message: 'Email vérifié' });
+  } catch (e) {
+    console.error('verifyEmailOtp error:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 

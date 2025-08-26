@@ -9,7 +9,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 
 const TeacherDashboard = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  // const [activeTab, setActiveTab] = useState('overview');
   const [summary, setSummary] = useState(null);
   const [earnings, setEarnings] = useState([]);
   const [ratings, setRatings] = useState({ distribution: [], average: 0 });
@@ -204,7 +204,7 @@ const TeacherDashboard = () => {
           <h3 className="text-lg font-semibold mb-4">Actions rapides</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link 
-              to="/define-slots" 
+              to="/teacher/slot-management" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
@@ -215,7 +215,7 @@ const TeacherDashboard = () => {
             </Link>
             
             <Link 
-              to="/upload-teacher-video" 
+              to="/file-upload" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-2">
@@ -236,16 +236,7 @@ const TeacherDashboard = () => {
               <span className="text-xs text-gray-500 text-center">Gérer les sessions</span>
             </Link>
             
-            <Link 
-              to="/teacher-ratings" 
-              className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-2">
-                <span className="text-2xl">⭐</span>
-              </div>
-              <span className="text-sm font-medium text-center">Mes évaluations</span>
-              <span className="text-xs text-gray-500 text-center">Voir les avis</span>
-            </Link>
+            {/* Teacher ratings entry removed per request; ratings live under student dashboard now */}
           </div>
           
           {/* Second row of actions */}
@@ -320,7 +311,7 @@ const TeacherDashboard = () => {
             </Link>
             
             <Link 
-              to="/file-upload-demo" 
+              to="/file-upload" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-2">

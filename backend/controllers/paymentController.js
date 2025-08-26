@@ -249,7 +249,8 @@ const confirmCoursePurchase = async (req, res) => {
         filename: file.filename,
         originalName: file.originalName,
         fileType: file.fileType,
-        fileUrl: file.fileUrl
+        fileUrl: file.fileUrl,
+        cloudinaryId: file.cloudinaryId
       }))
     });
     
@@ -325,5 +326,29 @@ module.exports = {
   capturePayPalPayment,
   purchaseCourseWithStripe,
   confirmCoursePurchase,
-  stripeWebhook
+  stripeWebhook,
+  // Admin: revenue summary (gross purchases, wallet credits)
+  async getAdminRevenueSummary(req, res) {
+    try {
+      if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Accès administrateur requis' });
+      const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [purchaseAgg, walletAgg] = await Promise.all([
+        Purchase.aggregate([
+          { $match: { status: 'completed', purchasedAt: { $gte: from } } },
+          { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+        ]),
+        Wallet.aggregate([
+          { $unwind: '$transactions' },
+          { $match: { 'transactions.status': 'completed', 'transactions.type': 'deposit', 'transactions.createdAt': { $gte: from } } },
+          { $group: { _id: null, totalCredits: { $sum: '$transactions.amount' }, creditCount: { $sum: 1 } } }
+        ])
+      ]);
+      const totalRevenue = purchaseAgg[0]?.total || 0;
+      const totalCredits = walletAgg[0]?.totalCredits || 0;
+      return res.json({ success: true, data: { totalRevenue, totalCredits } });
+    } catch (e) {
+      console.error('getAdminRevenueSummary error:', e);
+      return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+  }
 }; 

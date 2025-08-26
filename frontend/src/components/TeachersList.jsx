@@ -131,8 +131,13 @@ const TeachersList = () => {
                   </div>
                 )}
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-1">
-                {teacher.firstName} {teacher.lastName}
+              <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+                <span>{teacher.firstName} {teacher.lastName}</span>
+                {teacher.teacherInfo?.rank && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${teacher.teacherInfo.rank === 'Hyperprof' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : teacher.teacherInfo.rank === 'Superprof' ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-700'}`}>
+                    {teacher.teacherInfo.rank}
+                  </span>
+                )}
               </h3>
               <div className="text-sm text-gray-500 mb-2 flex items-center">
                 <FaEnvelope className="mr-1" /> {teacher.email}
@@ -147,9 +152,11 @@ const TeachersList = () => {
                 <FaGraduationCap className="mr-1" />
                 {teacher.teacherInfo?.education?.degree || 'Niveau non renseigné'}
               </div>
-              <div className="text-xs text-gray-400 mt-2">
-                {teacher.teacherInfo?.rank ? `Rang : ${teacher.teacherInfo.rank}` : ''}
-              </div>
+              {teacher.teacherInfo?.metrics?.avgRating ? (
+                <div className="text-xs text-gray-500 mt-2">⭐ {teacher.teacherInfo.metrics.avgRating.toFixed(1)} · {teacher.teacherInfo.metrics.reviewsCount || teacher.teacherInfo.totalReviews || 0} avis</div>
+              ) : (
+                <div className="text-xs text-gray-400 mt-2">{teacher.teacherInfo?.rank ? `Rang : ${teacher.teacherInfo.rank}` : ''}</div>
+              )}
               <Link 
                 to={`/teacher/${teacher._id}`}
                 className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"

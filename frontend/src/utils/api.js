@@ -85,6 +85,17 @@ export const teacherAPI = {
   getDashboardRatings: () => api.get('/teachers/me/dashboard/ratings'),
   getDashboardFollowers: (query = '') => api.get(`/teachers/me/dashboard/followers${query}`),
   getDashboardPostsEngagement: () => api.get('/teachers/me/dashboard/posts/engagement'),
+  // Admin ranking endpoints
+  getAdminRanking: (params) => api.get('/teachers/admin/ranking/list', { params }),
+  recomputeAdminRanking: () => api.post('/teachers/admin/ranking/recompute'),
+  
+  // Teacher Evolution endpoints
+  getEvolution: (params) => api.get('/teachers/evolution', { params }),
+  getEvolutionById: (teacherId, params) => api.get(`/teachers/${teacherId}/evolution`, { params }),
+  getEvolutionStats: () => api.get('/teachers/evolution/stats'),
+  getEvolutionHistory: (params) => api.get('/teachers/evolution/history', { params }),
+  calculateEvolution: (data) => api.post('/teachers/evolution/calculate', data),
+  getEvolutionLeaderboard: (params) => api.get('/teachers/evolution/leaderboard', { params })
 };
 
 // Services pour les étudiants
@@ -94,7 +105,39 @@ export const studentAPI = {
   
   // Mettre à jour le profil étudiant
   updateProfile: (profileData) => api.put('/auth/student/profile', profileData),
-}; 
+
+  // Dashboard endpoints (role étudiant)
+  getDashboardStats: () => api.get('/students/me/dashboard/stats'),
+  getDashboardActivity: () => api.get('/students/me/dashboard/activity'),
+  getDashboardCourses: () => api.get('/students/me/dashboard/courses'),
+  getDashboardEvaluations: () => api.get('/students/me/dashboard/evaluations'),
+  getDashboardMeetings: () => api.get('/students/me/dashboard/meetings'),
+  getDashboardProgress: () => api.get('/students/me/dashboard/progress'),
+};
+
+// Services de dashboard
+export const dashboardAPI = {
+  // Statistiques générales du dashboard
+  getStats: () => api.get('/dashboard/stats'),
+  
+  // Activité récente
+  getRecentActivity: () => api.get('/dashboard/activity'),
+  
+  // Cours de l'étudiant
+  getStudentCourses: () => api.get('/dashboard/student/courses'),
+  
+  // Évaluations de l'étudiant
+  getStudentEvaluations: () => api.get('/dashboard/student/evaluations'),
+  
+  // Meetings de l'étudiant
+  getStudentMeetings: () => api.get('/dashboard/student/meetings'),
+  
+  // Progression de l'étudiant
+  getStudentProgress: () => api.get('/dashboard/student/progress'),
+  
+  // Wallet de l'étudiant
+  getStudentWallet: () => api.get('/dashboard/student/wallet'),
+};
 
 export const purchaseAPI = {
   // Acheter un cours
@@ -177,6 +220,141 @@ export const moderationAPI = {
   
   // Admin: Vérifier le statut de modération d'un utilisateur
   checkUserModerationStatus: (userId) => api.get(`/moderation/user/${userId}/status`),
+};
+
+// Services de commentaires
+export const commentAPI = {
+  // Créer un commentaire
+  createComment: (commentData) => api.post('/comments', commentData),
+  
+  // Obtenir les commentaires d'une entité
+  getComments: (entityType, entityId, params) => api.get(`/comments/${entityType}/${entityId}`, { params }),
+  
+  // Mettre à jour un commentaire
+  updateComment: (commentId, updateData) => api.put(`/comments/${commentId}`, updateData),
+  
+  // Supprimer un commentaire
+  deleteComment: (commentId) => api.delete(`/comments/${commentId}`),
+  
+  // Réagir à un commentaire (like/dislike)
+  reactToComment: (commentId, reaction) => api.post(`/comments/${commentId}/react`, { reaction }),
+  
+  // Signaler un commentaire
+  reportComment: (commentId, reason) => api.post(`/comments/${commentId}/report`, { reason }),
+};
+
+// Services de suivi (follows)
+export const followAPI = {
+  // Suivre un enseignant
+  followTeacher: (teacherId) => api.post(`/follows/teachers/${teacherId}/follow`),
+  
+  // Ne plus suivre un enseignant
+  unfollowTeacher: (teacherId) => api.delete(`/follows/teachers/${teacherId}/follow`),
+  
+  // Vérifier le statut de suivi
+  checkFollowStatus: (teacherId) => api.get(`/follows/teachers/${teacherId}/follow-status`),
+  
+  // Obtenir les followers d'un enseignant
+  getTeacherFollowers: (teacherId, params) => api.get(`/follows/teachers/${teacherId}/followers`, { params }),
+  
+  // Obtenir les enseignants suivis par l'utilisateur
+  getFollowingTeachers: (params) => api.get('/follows/me/following', { params }),
+  
+  // Obtenir les statistiques de suivi
+  getFollowStats: (teacherId) => api.get(`/follows/teachers/${teacherId}/follow-stats`),
+};
+
+// Services de posts
+export const postAPI = {
+  // Créer un post
+  createPost: (postData) => api.post('/posts', postData),
+  
+  // Obtenir le feed de l'utilisateur
+  getFeed: (params) => api.get('/posts/feed', { params }),
+  
+  // Obtenir un post spécifique
+  getPost: (postId) => api.get(`/posts/${postId}`),
+  
+  // Mettre à jour un post
+  updatePost: (postId, updateData) => api.put(`/posts/${postId}`, updateData),
+  
+  // Supprimer un post
+  deletePost: (postId) => api.delete(`/posts/${postId}`),
+  
+  // Obtenir les posts d'un enseignant
+  getTeacherPosts: (teacherId, params) => api.get(`/posts/teachers/${teacherId}/posts`, { params }),
+  
+  // Liker/unliker un post
+  toggleLike: (postId) => api.post(`/posts/${postId}/like`),
+  
+  // Partager un post
+  sharePost: (postId) => api.post(`/posts/${postId}/share`),
+  
+  // Signaler un post
+  reportPost: (postId, reason) => api.post(`/posts/${postId}/report`, { reason }),
+  
+  // Obtenir les statistiques des posts d'un enseignant
+  getTeacherPostStats: (teacherId) => api.get(`/posts/teachers/${teacherId}/post-stats`),
+};
+
+// Services d'évaluation des enseignants
+export const teacherRatingAPI = {
+  // Créer une évaluation d'enseignant
+  createTeacherRating: (ratingData) => api.post('/teacher-ratings', ratingData),
+  
+  // Obtenir les évaluations d'un enseignant
+  getTeacherRatings: (teacherId, params) => api.get(`/teacher-ratings/${teacherId}`, { params }),
+  
+  // Obtenir les statistiques d'un enseignant
+  getTeacherStats: (teacherId) => api.get(`/teacher-ratings/${teacherId}/stats`),
+  
+  // Obtenir les meilleurs enseignants
+  getTopTeachers: (params) => api.get('/teacher-ratings/top', { params }),
+  
+  // Mettre à jour une évaluation
+  updateTeacherRating: (ratingId, updateData) => api.put(`/teacher-ratings/${ratingId}`, updateData),
+  
+  // Supprimer une évaluation
+  deleteTeacherRating: (ratingId) => api.delete(`/teacher-ratings/${ratingId}`),
+  
+  // Admin: Modérer une évaluation
+  moderateRating: (ratingId, moderationData) => api.patch(`/teacher-ratings/${ratingId}/moderate`, moderationData),
+};
+
+// Services de sessions vidéo
+export const videoSessionAPI = {
+  // Créer une session vidéo
+  createSession: (sessionData) => api.post('/sessions', sessionData),
+  
+  // Obtenir toutes les sessions
+  getSessions: (params) => api.get('/sessions', { params }),
+  
+  // Obtenir une session spécifique
+  getSession: (sessionId) => api.get(`/sessions/${sessionId}`),
+  
+  // Mettre à jour une session
+  updateSession: (sessionId, updateData) => api.put(`/sessions/${sessionId}`, updateData),
+  
+  // Supprimer une session
+  deleteSession: (sessionId) => api.delete(`/sessions/${sessionId}`),
+  
+  // S'inscrire à une session
+  enrollInSession: (sessionId) => api.post(`/sessions/${sessionId}/enroll`),
+  
+  // Rejoindre une session
+  joinSession: (sessionId) => api.post(`/sessions/${sessionId}/join`),
+  
+  // Obtenir les sessions d'un enseignant
+  getTeacherSessions: (teacherId, params) => api.get(`/sessions/teacher/${teacherId}`, { params }),
+  
+  // Obtenir les sessions d'un étudiant
+  getStudentSessions: (params) => api.get('/sessions/student', { params }),
+  
+  // Publier une session
+  publishSession: (sessionId) => api.patch(`/sessions/${sessionId}/publish`),
+  
+  // Annuler une session
+  cancelSession: (sessionId, reason) => api.patch(`/sessions/${sessionId}/cancel`, { reason }),
 };
 
 // Export the main api instance for direct use

@@ -24,15 +24,20 @@ const {
 } = require('../middleware/authMiddleware');
 
 // Import des middlewares d'upload
-const { uploadPDF: uploadPDFMiddleware, uploadVideo: uploadVideoMiddleware, uploadAvatar: uploadAvatarMiddleware } = require('../config/cloudinary');
+const { 
+  uploadPDF: uploadPDFMiddleware, 
+  uploadVideo: uploadVideoMiddleware, 
+  uploadAvatar: uploadAvatarMiddleware,
+  uploadEvidence
+} = require('../config/cloudinary');
 
 // Routes protégées pour l'upload de fichiers
 router.post('/upload/pdf', authenticateToken, uploadPDFMiddleware.single('pdf'), uploadPDF);
 router.post('/upload/video', authenticateToken, uploadVideoMiddleware.single('video'), uploadVideo);
 router.post('/upload/avatar', authenticateToken, uploadAvatarMiddleware.single('avatar'), uploadAvatar);
-router.post('/upload/file', authenticateToken, uploadPDFMiddleware.single('file'), uploadFile);
-router.post('/upload/course-material', authenticateToken, uploadPDFMiddleware.single('file'), uploadCourseMaterial);
-router.post('/upload/evaluation-file', authenticateToken, uploadPDFMiddleware.single('file'), uploadEvaluationFile);
+router.post('/upload/file', authenticateToken, uploadEvidence.single('file'), uploadFile);
+router.post('/upload/course-material', authenticateToken, uploadEvidence.single('file'), uploadCourseMaterial);
+router.post('/upload/evaluation-file', authenticateToken, uploadEvidence.single('file'), uploadEvaluationFile);
 
 // Video upload route (teacher only)
 router.post('/videos/upload', authenticateToken, authorizeRoles('enseignant'), videoUploadMiddleware, uploadVideo);

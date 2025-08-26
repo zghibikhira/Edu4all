@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/authMiddleware');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 const {
-  createStripePaymentIntent,
-  confirmStripePayment,
-  createPayPalOrder,
-  capturePayPalPayment,
-  purchaseCourseWithStripe,
-  confirmCoursePurchase,
-  stripeWebhook
+	createStripePaymentIntent,
+	confirmStripePayment,
+	createPayPalOrder,
+	capturePayPalPayment,
+	purchaseCourseWithStripe,
+	confirmCoursePurchase,
+	stripeWebhook,
+	getAdminRevenueSummary
 } = require('../controllers/paymentController');
 
 // Webhook Stripe (pas d'authentification requise)
@@ -28,5 +29,8 @@ router.post('/paypal/capture-payment', capturePayPalPayment);
 // Achat de cours
 router.post('/stripe/purchase-course', purchaseCourseWithStripe);
 router.post('/confirm-purchase', confirmCoursePurchase);
+
+// Admin
+router.get('/admin/revenue-summary', authorizeRoles('admin'), getAdminRevenueSummary);
 
 module.exports = router; 
