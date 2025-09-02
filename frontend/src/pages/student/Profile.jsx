@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fa';
 
 const StudentProfile = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -87,9 +87,30 @@ const StudentProfile = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simuler une mise à jour
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await updateUser(profileData);
+      // Construire la payload selon le schéma backend
+      const levelMap = {
+        'Primaire': 'primaire',
+        'Collège': 'college',
+        'Lycée': 'lycee',
+        'Supérieur': 'superieur',
+        'Formation continue': 'superieur'
+      };
+
+      const payload = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        avatar: profileData.avatar || undefined,
+        studentInfo: {
+          level: levelMap[profileData.level] || 'lycee',
+          languages: profileData.languages
+        }
+      };
+
+      const res = await updateProfile(payload);
+      if (!res?.success) {
+        throw new Error(res?.error || 'Échec de la mise à jour');
+      }
       setIsEditing(false);
       alert('Profil mis à jour avec succès !');
     } catch (error) {

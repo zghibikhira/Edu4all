@@ -142,6 +142,25 @@ const NotificationPreferences = () => {
     setHasChanges(true);
   };
 
+  // Helpers for "select all" per channel
+  const areAllEnabledForChannel = (channel) => {
+    if (!preferences) return false;
+    return notificationTypes.every((t) => preferences.notifications[channel]?.[t.key]);
+  };
+
+  const toggleAllForChannel = (channel, enabled) => {
+    setPreferences(prev => {
+      const next = { ...prev, notifications: { ...prev.notifications, [channel]: { ...prev.notifications[channel] } } };
+      notificationTypes.forEach((t) => {
+        if (next.notifications[channel][t.key] !== undefined) {
+          next.notifications[channel][t.key] = enabled;
+        }
+      });
+      return next;
+    });
+    setHasChanges(true);
+  };
+
   // Update general preference
   const updateGeneralPreference = (key, value) => {
     setPreferences(prev => ({
@@ -253,6 +272,21 @@ const NotificationPreferences = () => {
                 <p className="text-gray-600 mb-6">
                   Choisissez comment vous souhaitez recevoir vos notifications pour chaque type d'événement.
                 </p>
+
+                {/* Select-all controls per channel */}
+                <div className="grid grid-cols-3 gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                  {[{ key: 'inAppOn', label: 'Tout In-App' }, { key: 'emailOn', label: 'Tout Email' }, { key: 'smsOn', label: 'Tout SMS' }].map((ch) => (
+                    <label key={ch.key} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={areAllEnabledForChannel(ch.key)}
+                        onChange={(e) => toggleAllForChannel(ch.key, e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{ch.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-6">

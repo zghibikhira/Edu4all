@@ -319,7 +319,14 @@ exports.updateProfile = async (req, res) => {
     if (phone) updateData.phone = phone;
     if (avatar) updateData.avatar = avatar;
     if (studentInfo) updateData.studentInfo = studentInfo;
-    if (teacherInfo) updateData.teacherInfo = teacherInfo;
+    if (teacherInfo) {
+      // Coerce availability shape if frontend sent a string (legacy UI)
+      const sanitized = { ...teacherInfo };
+      if (sanitized && typeof sanitized.availability === 'string') {
+        sanitized.availability = { timezone: 'Europe/Paris', schedule: [] };
+      }
+      updateData.teacherInfo = sanitized;
+    }
 
     const user = await User.findByIdAndUpdate(
       req.userId,

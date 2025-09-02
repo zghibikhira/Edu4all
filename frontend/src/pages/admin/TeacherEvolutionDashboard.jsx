@@ -4,8 +4,6 @@ import { FaChartLine, FaTrophy, FaUsers, FaArrowUp, FaArrowDown, FaMinus, FaEye,
 import { 
   LineChart, 
   Line, 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   Tooltip, 
@@ -57,16 +55,7 @@ const TeacherEvolutionDashboard = () => {
     }
   };
 
-  const getTrendIcon = (trend) => {
-    switch (trend) {
-      case 'increasing':
-        return <FaArrowUp className="text-green-500" />;
-      case 'decreasing':
-        return <FaArrowDown className="text-red-500" />;
-      default:
-        return <FaMinus className="text-gray-500" />;
-    }
-  };
+  // removed unused getTrendIcon
 
   const getRankColor = (rank) => {
     switch (rank) {

@@ -18,7 +18,8 @@ const TeacherProfile = () => {
     education: user?.teacherInfo?.education || { degree: '', school: '', year: '' },
     languages: user?.teacherInfo?.languages || [],
     hourlyRate: user?.teacherInfo?.hourlyRate || 0,
-    availability: user?.teacherInfo?.availability || 'flexible',
+    availability: user?.teacherInfo?.availability || { timezone: 'Europe/Paris', schedule: [] },
+    availabilityMode: 'flexible',
     specializations: user?.teacherInfo?.specializations || []
   });
 
@@ -35,7 +36,8 @@ const TeacherProfile = () => {
         education: user.teacherInfo?.education || { degree: '', school: '', year: '' },
         languages: user.teacherInfo?.languages || [],
         hourlyRate: user.teacherInfo?.hourlyRate || 0,
-        availability: user.teacherInfo?.availability || 'flexible',
+        availability: user.teacherInfo?.availability || { timezone: 'Europe/Paris', schedule: [] },
+        availabilityMode: 'flexible',
         specializations: user.teacherInfo?.specializations || []
       });
     }
@@ -77,7 +79,9 @@ const TeacherProfile = () => {
           education: profile.education,
           languages: profile.languages,
           hourlyRate: profile.hourlyRate,
-          availability: profile.availability,
+          availability: typeof profile.availability === 'string' 
+            ? { timezone: 'Europe/Paris', schedule: [] }
+            : profile.availability,
           specializations: profile.specializations
         }
       };
@@ -228,8 +232,8 @@ const TeacherProfile = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Disponibilité</label>
                   <select
-                    name="availability"
-                    value={profile.availability}
+                    name="availabilityMode"
+                    value={profile.availabilityMode}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >

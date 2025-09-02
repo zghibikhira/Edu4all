@@ -17,6 +17,8 @@ const TeacherDashboard = () => {
   const [interval, setInterval] = useState('month');
   const [showPostModal, setShowPostModal] = useState(false);
   const isTeacher = user?.role === 'enseignant';
+  const [evolutionSeries, setEvolutionSeries] = useState([]);
+  const [evolutionRank, setEvolutionRank] = useState(null);
 
   useEffect(() => {
     if (!isTeacher) return;
@@ -35,6 +37,27 @@ const TeacherDashboard = () => {
         setSummary(sRes.data.data);
         setEarnings(eRes.data.data);
         setRatings(rRes.data.data);
+
+        // Fetch compact evolution data for dashboard widget
+        try {
+          const evoRes = await teacherAPI.getEvolution({ period: 'monthly', limit: 6 });
+          const evo = evoRes?.data?.data || [];
+          const compact = evo
+            .map(item => ({
+              period: new Date(item.periodStart).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+              score: item.evolutionScore || 0
+            }))
+            .reverse();
+          setEvolutionSeries(compact);
+          // derive current rank if present
+          if (evo[0]?.rankTier || evo[0]?.rank) {
+            setEvolutionRank(evo[0].rank || evo[0].rankTier);
+          } else if (sRes?.data?.data?.totals?.rankTier || sRes?.data?.data?.totals?.rank) {
+            setEvolutionRank(sRes.data.data.totals.rank || sRes.data.data.totals.rankTier);
+          }
+        } catch (evoErr) {
+          console.warn('Evolution widget load failed', evoErr);
+        }
       } catch (e) {
         console.error('Error loading teacher dashboard:', e);
       }
@@ -49,6 +72,8 @@ const TeacherDashboard = () => {
   const ratingBars = useMemo(() => {
     return ratings.distribution.map(d => ({ rating: d._id, count: d.count }));
   }, [ratings]);
+
+  const evolutionChart = useMemo(() => evolutionSeries, [evolutionSeries]);
 
   const kpis = [
     { title: 'Revenus (période)', value: `${(summary?.totals?.earnings || 0).toFixed(2)} €`, icon: '💰', color: 'bg-orange-500' },
@@ -139,6 +164,30 @@ const TeacherDashboard = () => {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+
+        {/* Evolution widget */}
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold">Évolution récente</h3>
+            <Link to="/teacher/evolution" className="text-blue-600 hover:text-blue-800 text-sm">Voir l'évolution</Link>
+          </div>
+          {evolutionChart.length === 0 ? (
+            <div className="text-gray-500 text-center py-10">Aucune donnée d'évolution pour l'instant</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={evolutionChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} dot />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+          {evolutionRank && (
+            <div className="mt-3 text-sm text-gray-600">Rang actuel: <span className="font-medium text-gray-900">{evolutionRank}</span></div>
+          )}
         </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

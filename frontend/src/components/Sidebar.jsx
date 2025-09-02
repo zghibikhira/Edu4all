@@ -49,7 +49,7 @@ const Sidebar = ({ open, onClose }) => {
       { label: 'Mes documents', link: '/documents', icon: FaFileAlt },
     ] : [],
     teacher: user?.role === 'enseignant' ? [
-      { label: 'Tableau de bord', link: '/teacher-dashboard', icon: FaTachometerAlt },
+      { label: 'Tableau de bord', link: '/teacher/dashboard', icon: FaTachometerAlt },
       { label: 'Gestion créneaux', link: '/teacher/slot-management', icon: FaCalendarAlt },
       { label: 'Sessions vidéo', link: '/teacher/video-sessions', icon: FaVideo },
       { label: 'Mon profil', link: '/teacher/profile', icon: FaUser },

@@ -54,7 +54,7 @@ const Header = ({ onMenuClick }) => {
             <>
               <NotificationBell />
               <Link 
-                to="/dashboard" 
+                to={user.role === 'enseignant' ? '/teacher/dashboard' : '/dashboard'} 
                 className="btn-primary hidden md:inline-block"
                 aria-label="Accéder au tableau de bord"
               >
